@@ -1,42 +1,47 @@
 # -*- coding: utf-8 -*-
 from model import *
 from math import exp
-X = 10
-fake_margin = 0.2
-real_margin = 0.5
+
+
+X = 10  # the number of goods' kind.
+fake_margin = 0.2  # fake cost proportionate of price
+real_margin = 0.5  # real cost proportionate of price
 fake_price_efficiency = 0.9  # TBD! a function of price
 
 # Merchant's default parameter
 _comment = 5
 _good_kind = [x for x in range(X)]  # how many goods one merchant sells
-_fake_rate = None  #
-_fake_c_par = [fake_margin * exp(i) for i in _good_kind]  # fake_cost
-_fake_p_par = [fake_price_efficiency*exp(i) for i in _good_kind]  # fake_price
+_fake_rate = [exp(i - X) for i in range(X)]  # TBD
+_fake_c_par = [fake_margin * fake_price_efficiency * exp(i) for i in _good_kind]  # fake_cost
+_fake_p_par = [fake_price_efficiency * exp(i) for i in _good_kind]  # fake_price
 _real_c_par = [real_margin * exp(i) for i in _good_kind]  # real_cost
 _real_p_par = [exp(i) for i in _good_kind]  # real_price
-_bound_par = [3, 0.05, 9, 0.05]  # de_fake_bound & rate, in_fake_bound & rate
+_bound_par = [3, 0.8, 9, 1.05]  # de_fake_bound & rate, in_fake_bound & rate
 
 # Customer's default parameter
 _buy_bound = 5
-_identify_fake_rate = 0
-_buy_bound_par = []  # buy_bound_incr & decr
-_buy_comment_par = []  # buy_comment_incr & decr
-_prob_random = None  # the probability that one buys something randomly
+_identify_fake_rate = 0.8
+_buy_bound_par = [0.1, 0.2]  # buy_bound_real & fake
+_buy_comment_par = [comment_bound, -.5 * comment_bound]  # buy_comment_real & fake
+_prob_random = 0.05  # the probability that one buys something randomly
 
 # Regulator's default parameter
-_lazy_par = []  # lazy_fake_rate; lazy_cost
-_diligent_par = []  # diligent_fake_rate, diligent_cost
-_punishment_par = []  # punishment_money, punishment_comment
+_lazy_par = [0.8, 0.05]  # lazy_fake_rate; lazy_cost_rate
+_diligent_par = [1, 0.2]  # diligent_fake_rate, diligent_cost_rate
+_punishment_par = [10, comment_bound * 0.2]  # punishment_money, punishment_comment
 
 
 def gen_mer_model(mer_id=None, comment=_comment, good_kind=_good_kind, fake_rate=_fake_rate, fake_c_par=_fake_c_par,
-                  fake_p_par = _fake_p_par,real_c_par=_real_c_par, real_p_par=_real_p_par, bound_par=_bound_par):
-    par = [mer_id, comment, good_kind, fake_rate, fake_c_par,fake_p_par, real_c_par,real_p_par, bound_par]
+                  fake_p_par=None, real_c_par=_real_c_par, real_p_par=_real_p_par, bound_par=_bound_par):
+    if fake_p_par is None:
+        fake_p_par = _fake_p_par
+    par = [mer_id, comment, good_kind, fake_rate, [fake_c_par, fake_p_par], [real_c_par, real_p_par], bound_par]
     mer = Merchant(par)
     return mer
 
 
-def gen_cus_model(cus_id=None, buy_bound=_buy_bound, identify_fake_rate=_identify_fake_rate, buy_bound_par=_buy_bound_par,
+def gen_cus_model(cus_id=None, buy_bound=_buy_bound, identify_fake_rate=_identify_fake_rate,
+                  buy_bound_par=_buy_bound_par,
                   buy_comment_par=_buy_comment_par, prob_random=_prob_random):
     par = [cus_id, buy_bound, identify_fake_rate, buy_bound_par, buy_comment_par, prob_random]
     cus = Customer(par)
@@ -48,11 +53,16 @@ def gen_regulator_model(reg_id=None, lazy_par=_lazy_par, diligent_par=_diligent_
     regulator = Regulator(par)
     return regulator
 
-def gen_models():
-    pass
+
+def gen_models(mer_num=10, cus_num=100, regulators_num=5):
+    merchants = [gen_mer_model(i) for i in range(mer_num)]
+    customers = [gen_cus_model(i) for i in range(cus_num)]
+    regulators = [gen_regulator_model(i) for i in range(regulators_num)]
+    return merchants, customers, regulators
 
 
 def game(merchants, customers, regulators):
-
-
     pass
+
+
+

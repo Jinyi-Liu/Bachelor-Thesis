@@ -6,7 +6,7 @@ comment_bound = 10
 
 
 class Merchant:
-    def __init__(self, *par):
+    def __init__(self, par):
         self.ID = par[0]
         self.comment = par[1]
 
@@ -46,7 +46,7 @@ class Merchant:
 
 
 class Customer:
-    def __init__(self, *par):
+    def __init__(self, par):
         self.ID = par[0]
         self.buy_bound = par[1]
         self.identify_fake_rate = par[2]
@@ -111,19 +111,20 @@ class Customer:
 
 
 class Regulator:
-    def __init__(self, *par):
+    def __init__(self, par):
         """
 
         :param par:
         """
         self.ID = par[0]
         self.lazy_i_rate = par[1][0]  # Lazily regulate.
-        self.lazy_cost = par[1][1]
+        self.lazy_cost_rate = par[1][1]
         self.diligent_i_rate = par[2][0]  # The ability to spot the fake when diligently regulate the market.
-        self.diligent_cost = par[2][1]
-        self.punishment_money = par[3][0]
-        self.punishment_comment = par[3][1]
+        self.diligent_cost_rate = par[2][1]
+        self.punishment_money_multiple = par[3][0]
+        self.punishment_comment_multiple = par[3][1]
         self.fine_got = 0
+        self.check_cost = 0
         # self.make_public = True
 
     def check_market(self, lazy=None, mers=None, ):
@@ -145,11 +146,12 @@ class Regulator:
                 self.punish(False, merchant2check)
                 # TBD
 
-    def punish(self, lazy=None, mer=None):
+    def punish(self, good_price=None, lazy=None, mer=None):
         mer.punished_count += 1
-        mer.money -= self.punishment_money
-        mer.comment -= self.punishment_comment
+        mer.money -= self.punishment_money_multiple * good_price
+        mer.comment -= self.punishment_comment_multiple * comment_bound
         self.fine_got += self.punishment_money
+        self.check_cost += good_price * (self.lazy_cost_rate if lazy else self.diligent_cost_rate)
 
     def make_public(self):
         pass
