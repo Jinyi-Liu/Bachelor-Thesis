@@ -8,11 +8,12 @@ comment_bound = 10
 class Merchant:
     def __init__(self, par):
         self.ID = par[0]
-        self.comment = par[1]
+        self.comment = par[1][0]
+        self.comment_count = par[1][1]
 
         self.good_kind = par[2]
 
-        self.fake_rate = par[3]
+        self.fake_rate = np.array(par[3])
 
         self.fake_cost = par[4][0]
         self.fake_price = par[4][1]
@@ -68,6 +69,10 @@ class Customer:
             self.buy_bound -= self.buy_bound_real
         else:
             self.buy_bound += self.buy_bound_fake
+        if self.buy_bound < 0:
+            self.buy_bound = 0
+        elif self.buy_bound > 10:
+            self.buy_bound = 10
 
     def random_buy(self):
         """
@@ -86,28 +91,31 @@ class Customer:
         index, mers = bound_choose(mers, mers_num, self.buy_bound)  # buying with consideration of the bound.
         index = random_choose(index, mers_num, self.prob_random)  # irrational: randomly choose someone to buy.
         if index == 0:  # No merchant to buy.
-            return 0, None, None
+            return -1, None, None
         merchant2buy = choice(mers[:index])
         good_kind = choice(merchant2buy.good_kind)
-        fake_rate = merchant2buy.fake_rate[good_kind]
-        identify_fake_rate = self.identify_fake_rate[good_kind]  # rate for identifying such good
+        fake_rate = merchant2buy.fake_rate[good_kind-1]
+        identify_fake_rate = self.identify_fake_rate[good_kind-1]  # rate for identifying such good
         rand = random()
-        real = True
+        perceive_type = True  # Customer's thought
+        true_type = True  # Goods real type
         # sold fake and identified to be fake.
         if rand <= fake_rate * identify_fake_rate:
             self.change_bound(False)
-            real = False
+            true_type = False
+            perceive_type = False
         # Merchant sold fake but wasn't found by the customer.
         if fake_rate * identify_fake_rate < rand <= fake_rate:
             self.change_bound(True)
-            real = False
+            true_type = False
+            perceive_type = True
         else:
             # Sold real
             # Default
             self.change_bound(True)
-        merchant2buy.money += revenue(real, good_kind, merchant2buy)
+        merchant2buy.money += revenue(true_type, good_kind, merchant2buy)
         merchant2buy.sell_count += 1
-        return real, merchant2buy.ID, good_kind
+        return perceive_type, merchant2buy.ID, good_kind
 
 
 class Regulator:
@@ -182,6 +190,7 @@ def bound_choose(mers, mers_num, bound):
 
 
 def revenue(real=None, good_kind=None, merchant2buy=None):
+    good_kind = good_kind-1
     if not real:
         price = merchant2buy.fake_price[good_kind]
         cost = merchant2buy.fake_cost[good_kind]

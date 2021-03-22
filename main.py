@@ -1,3 +1,5 @@
 from func import *
 
-mers, cus, regs=gen_models()
+#mers, cus, regs=gen_models()
+
+data = game()
