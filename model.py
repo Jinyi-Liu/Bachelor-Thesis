@@ -81,9 +81,10 @@ class Customer:
         """
         pass
 
-    def buy(self, mers, mers_num):
+    def buy(self, mers, mers_num, good2buy):
         """
         Act.
+        :param good2buy:
         :param mers: from _mers to choose someone to buy
         :param mers_num:
         :return:
@@ -93,9 +94,9 @@ class Customer:
         if index == 0:  # No merchant to buy.
             return -1, None, None
         merchant2buy = choice(mers[:index])
-        good_kind = choice(merchant2buy.good_kind)
-        fake_rate = merchant2buy.fake_rate[good_kind-1]
-        identify_fake_rate = self.identify_fake_rate[good_kind-1]  # rate for identifying such good
+        good_kind = good2buy
+        fake_rate = merchant2buy.fake_rate[good_kind]
+        identify_fake_rate = self.identify_fake_rate[good_kind]  # rate for identifying such good
         rand = random()
         perceive_type = True  # Customer's thought
         true_type = True  # Goods real type
@@ -143,22 +144,24 @@ class Regulator:
         merchant2check = choice(mers)
         good2check = choice(merchant2check.good_kind)
         fake_rate = merchant2check.fake_rate[good2check]
+        fake_price = merchant2check.fake_price[good2check]
         rand = random()
         if lazy:
             # Merchant sold fake good and was caught.
             if rand <= fake_rate * self.lazy_i_rate:
-                self.punish(True, merchant2check)
+                self.punish(fake_price,True, merchant2check)
                 # TBD
         else:
             if rand <= fake_rate * self.diligent_i_rate:
-                self.punish(False, merchant2check)
+                self.punish(fake_price,False, merchant2check)
                 # TBD
 
     def punish(self, good_price=None, lazy=None, mer=None):
         mer.punished_count += 1
-        mer.money -= self.punishment_money_multiple * good_price
+        punishment_money = self.punishment_money_multiple * good_price
+        mer.money -= punishment_money
         mer.comment -= self.punishment_comment_multiple * comment_bound
-        self.fine_got += self.punishment_money
+        self.fine_got += punishment_money
         self.check_cost += good_price * (self.lazy_cost_rate if lazy else self.diligent_cost_rate)
 
     def make_public(self):
@@ -190,7 +193,7 @@ def bound_choose(mers, mers_num, bound):
 
 
 def revenue(real=None, good_kind=None, merchant2buy=None):
-    good_kind = good_kind-1
+    good_kind = good_kind
     if not real:
         price = merchant2buy.fake_price[good_kind]
         cost = merchant2buy.fake_cost[good_kind]

@@ -9,9 +9,9 @@ fake_price_efficiency = 0.9  # TBD! a function of price
 
 # Merchant's default parameter
 _comment = [5, 0]
-_good_kind = [x for x in range(1, 1+total_good_kinds)]  # how many goods one merchant sells
+_good_kind = [x for x in range(total_good_kinds)]  # how many goods one merchant sells
 # _fake_rate = [exp(i - total_good_kinds) for i in range(total_good_kinds)]  # TBD
-_fake_rate = [0.3 * (i / total_good_kinds) ** 2 for i in range(1,1+total_good_kinds)]
+_fake_rate = [.3 * (i / total_good_kinds) ** 2 for i in range(total_good_kinds)]
 _fake_c_par = [fake_margin * fake_price_efficiency * exp(i) for i in _good_kind]  # fake_cost
 _fake_p_par = [fake_price_efficiency * exp(i) for i in _good_kind]  # fake_price
 _real_c_par = [real_margin * exp(i) for i in _good_kind]  # real_cost
@@ -20,10 +20,10 @@ _bound_par = [3, 0.8, 9, 1.05]  # de_fake_bound & rate, in_fake_bound & rate
 
 # Customer's default parameter
 _buy_bound = 5
-_identify_fake_rate = [0.05 for i in range(total_good_kinds)]  # TBD
+_identify_fake_rate = [1 for i in range(total_good_kinds)]  # TBD
 _buy_bound_par = [0.1, 0.2]  # buy_bound_real & fake
 _buy_comment_par = [comment_bound, .5 * comment_bound]  # buy_comment_real & fake
-_prob_random = 0.5  # the probability that one buys something randomly
+_prob_random = 0.2  # the probability that one buys something randomly
 
 # Regulator's default parameter
 _lazy_par = [0.8, 0.05]  # lazy_fake_rate; lazy_cost_rate
@@ -98,7 +98,8 @@ def get_one_round_data(merchants, customers, regulators):
     mers_money = [mer.money for mer in merchants]
     mers_fake_rate = [mer.fake_rate for mer in merchants]
     customers_bound = [c.buy_bound for c in customers]
-    return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound]
+    reg = regulators[0].fine_got
+    return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound,reg]
 
 
 def change_fake_rate(mers):
@@ -106,17 +107,18 @@ def change_fake_rate(mers):
         mer.fake_change()
 
 
-def game(game_rounds=50):
+def game(game_rounds=500):
     mers, customers, regs = gen_models()
     all_round_data = []
     for game_round in range(game_rounds):
         comment_temp = np.zeros((2, len(mers)))
         for cus_id in range(len(customers)):
-            perceive_type, mer2buy_id, good_kind = customers[cus_id].buy(mers, len(mers))
+            perceive_type, mer2buy_id, good_kind = customers[cus_id].buy(mers, len(mers),good2buy=choice(mers[0].good_kind))
             if perceive_type == -1:
                 continue  # i.e. no merchant for buying so pass this customer
             comment_temp = comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, customers[cus_id])
         adjust_one_round_comment(mers, comment_temp)
         change_fake_rate(mers)
         all_round_data.extend([get_one_round_data(mers, customers, regs)])
+        regs[0].check_market(lazy=False,mers=mers)
     return all_round_data
