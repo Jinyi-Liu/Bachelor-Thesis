@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from model import *
 from math import exp
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn
 
@@ -102,7 +103,7 @@ def get_one_round_data(merchants, customers, regulators):
     mers_comment = [mer.comment for mer in merchants]
     mers_comment_count = [mer.comment_count for mer in merchants]
     mers_money = [mer.money for mer in merchants]
-    mers_fake_rate = [mer.fake_rate for mer in merchants]
+    mers_fake_rate = [list(mer.fake_rate) for mer in merchants]  # interesting!
     customers_bound = [c.buy_bound for c in customers]
     reg = regulators[0].fine_got
     return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound, reg]
@@ -129,15 +130,27 @@ def game(game_rounds=500):
             buy_data[game_round][cus_id] = [perceive_type, mer2buy_id, good_kind, true_type]
         adjust_one_round_comment(mers, comment_temp)
         change_fake_rate(mers)
-        all_round_data.extend([get_one_round_data(mers, customers, regs)])
+        temp = get_one_round_data(mers, customers, regs)
+        all_round_data.append(temp)
         regs[0].check_market(lazy=False, mers=mers)
 
     return all_round_data, buy_data
 
 
 def plot_image(data):
-    mers_comment = data[0]
-    mers_money = data[2]
-    mers_fake_rate = data[3]
-    customers_bound = data[4]
-    reg_find = data[5]
+    mers_num = len(data[0][0])
+    mers_comment = pd.DataFrame([_[0] for _ in data],columns=[i for i in range(mers_num)])
+    mers_money = pd.DataFrame([_[2] for _ in data],columns=[i for i in range(mers_num)])
+    mers_fake_rate = pd.DataFrame([_[3] for _ in data],columns=[i for i in range(mers_num)])
+    customers_bound = pd.DataFrame([_[4] for _ in data],columns=[i for i in range(mers_num)])
+    reg_find = pd.DataFrame([_[5] for _ in data],columns=[i for i in range(mers_num)])
+    fig, axes = plt.subplots(2, 2,figsize=(10,10))
+    # plt.subplots_adjust(wspace=0.2, hspace=0.5)
+    mers_comment.plot(ax=axes[0,0],)
+    axes[0,0].set_title("Merchants' Comments")
+    mers_money.plot(ax=axes[0,1])
+    axes[0,1].set_title("Merchants' Profit")
+    mers_fake_rate.plot(ax=axes[1,0])
+    axes[1,0].set_title("Merchants' fake rate")
+    plt.show()
+
