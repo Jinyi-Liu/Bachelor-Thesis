@@ -1,34 +1,38 @@
 # -*- coding: utf-8 -*-
 from model import *
 from math import exp
+import matplotlib.pyplot as plt
+import seaborn
 
-total_good_kinds = 2  # the number of goods' kind.
+total_good_kinds = 4  # the number of goods' kind.
 fake_margin = 0.2  # fake cost proportionate of price
 real_margin = 0.5  # real cost proportionate of price
 fake_price_efficiency = 0.9  # TBD! a function of price
 
 # Merchant's default parameter
-_comment = [5, 0]
+_comment = [5, 0]  # default comment, comment_count
 _good_kind = [x for x in range(total_good_kinds)]  # how many goods one merchant sells
 # _fake_rate = [exp(i - total_good_kinds) for i in range(total_good_kinds)]  # TBD
-_fake_rate = [.3 * (i / total_good_kinds) ** 2 for i in range(total_good_kinds)]
-_fake_c_par = [fake_margin * fake_price_efficiency * exp(i) for i in _good_kind]  # fake_cost
-_fake_p_par = [fake_price_efficiency * exp(i) for i in _good_kind]  # fake_price
-_real_c_par = [real_margin * exp(i) for i in _good_kind]  # real_cost
-_real_p_par = [exp(i) for i in _good_kind]  # real_price
-_bound_par = [3, 0.8, 9, 1.05]  # de_fake_bound & rate, in_fake_bound & rate
+_real_p_par = [10, 100, 500, 5000]  # real_price
+_real_c_par = [real_margin * price for price in _real_p_par]  # real_cost
+_fake_p_par = [fake_price_efficiency * price for price in _real_p_par]  # fake_price
+_fake_c_par = [fake_margin * fake_price for fake_price in _fake_p_par]  # fake_cost
+_fake_rate = [0.5, 0.3, 0.1, 0.05]
+
+_bound_par = [3, 0.9, 9, 1.05]  # de_fake_bound & rate, in_fake_bound & rate
 
 # Customer's default parameter
 _buy_bound = 5
-_identify_fake_rate = [1 for i in range(total_good_kinds)]  # TBD
+_identify_fake_rate = [0.05, 0.1, 0.15, 0.3]  # TBD
+_buy_good_prob = [0.4,0.3,0.2,0.1]
 _buy_bound_par = [0.1, 0.2]  # buy_bound_real & fake
 _buy_comment_par = [comment_bound, .5 * comment_bound]  # buy_comment_real & fake
 _prob_random = 0.2  # the probability that one buys something randomly
 
 # Regulator's default parameter
-_lazy_par = [0.8, 0.05]  # lazy_fake_rate; lazy_cost_rate
+_lazy_par = [0.8, 0.01]  # lazy_fake_rate; lazy_cost_rate
 _diligent_par = [1, 0.2]  # diligent_fake_rate, diligent_cost_rate
-_punishment_par = [10, comment_bound * 0.2]  # punishment_money, punishment_comment
+_punishment_par = [10, 0.2]  # punishment_money, punishment_comment
 
 
 def comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, cus):
@@ -42,8 +46,9 @@ def comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, cus
     :param cus:
     :return:
     """
-    comment_temp[0][mer2buy_id] += (cus.buy_comment_real if perceive_type else cus.buy_comment_fake) * exp(
-        good_kind / total_good_kinds - 1)
+    #comment_temp[0][mer2buy_id] += (cus.buy_comment_real if perceive_type else cus.buy_comment_fake) * exp(
+    #    good_kind / total_good_kinds - 1)
+    comment_temp[0][mer2buy_id] += (cus.buy_comment_real if perceive_type else (cus.buy_comment_fake * exp(-1*good_kind/total_good_kinds) ))
     comment_temp[1][mer2buy_id] += 1
     return comment_temp
 
@@ -61,10 +66,10 @@ def gen_mer_model(mer_id=None, comment=None, good_kind=None, fake_rate=_fake_rat
     return mer
 
 
-def gen_cus_model(cus_id=None, buy_bound=_buy_bound, identify_fake_rate=_identify_fake_rate,
+def gen_cus_model(cus_id=None, buy_bound=_buy_bound, buy_good_prob=_buy_good_prob,identify_fake_rate=_identify_fake_rate,
                   buy_bound_par=_buy_bound_par,
                   buy_comment_par=_buy_comment_par, prob_random=_prob_random):
-    par = [cus_id, buy_bound, identify_fake_rate, buy_bound_par, buy_comment_par, prob_random]
+    par = [cus_id, buy_bound,buy_good_prob, identify_fake_rate, buy_bound_par, buy_comment_par, prob_random]
     cus = Customer(par)
     return cus
 
@@ -75,8 +80,9 @@ def gen_regulator_model(reg_id=None, lazy_par=_lazy_par, diligent_par=_diligent_
     return regulator
 
 
-def gen_models(mer_num=10, cus_num=100, regulators_num=5):
-    merchants = [gen_mer_model(i) for i in range(mer_num)]
+def gen_models(mer_num=5, cus_num=100, regulators_num=5):
+    merchants = [gen_mer_model(i) for i in range(mer_num)]+[gen_mer_model(i, fake_rate=[.0 for j in range(total_good_kinds)]) for i in range(mer_num,2*mer_num)]
+    # merchants = [gen_mer_model(i,fake_rate=[.0,.0,.0,.0]) for i in range(mer_num)]
     customers = [gen_cus_model(i) for i in range(cus_num)]
     regulators = [gen_regulator_model(i) for i in range(regulators_num)]
     return merchants, customers, regulators
@@ -87,7 +93,7 @@ def adjust_one_round_comment(mers, comment_temp):
         comment = comment_temp[0][mer.ID]
         comment_num = comment_temp[1][mer.ID]
         if comment:
-            mer.comment = ((mer.comment*mer.comment_count) + comment) / (mer.comment_count + comment_num)
+            mer.comment = ((mer.comment * mer.comment_count) + comment) / (mer.comment_count + comment_num)
             mer.comment_count += comment_num
         mer.adjust_comment()
 
@@ -99,7 +105,7 @@ def get_one_round_data(merchants, customers, regulators):
     mers_fake_rate = [mer.fake_rate for mer in merchants]
     customers_bound = [c.buy_bound for c in customers]
     reg = regulators[0].fine_got
-    return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound,reg]
+    return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound, reg]
 
 
 def change_fake_rate(mers):
@@ -110,15 +116,28 @@ def change_fake_rate(mers):
 def game(game_rounds=500):
     mers, customers, regs = gen_models()
     all_round_data = []
+    buy_data = [[None for i in range(len(customers))] for j in range(game_rounds)]
     for game_round in range(game_rounds):
         comment_temp = np.zeros((2, len(mers)))
         for cus_id in range(len(customers)):
-            perceive_type, mer2buy_id, good_kind = customers[cus_id].buy(mers, len(mers),good2buy=choice(mers[0].good_kind))
+            choice_weight = customers[cus_id].buy_good_prob
+            good2buy = choices(mers[0].good_kind, choice_weight)[0]
+            perceive_type, mer2buy_id, good_kind, true_type = customers[cus_id].buy(mers, len(mers), good2buy)
             if perceive_type == -1:
                 continue  # i.e. no merchant for buying so pass this customer
             comment_temp = comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, customers[cus_id])
+            buy_data[game_round][cus_id] = [perceive_type, mer2buy_id, good_kind, true_type]
         adjust_one_round_comment(mers, comment_temp)
         change_fake_rate(mers)
         all_round_data.extend([get_one_round_data(mers, customers, regs)])
-        regs[0].check_market(lazy=False,mers=mers)
-    return all_round_data
+        regs[0].check_market(lazy=False, mers=mers)
+
+    return all_round_data, buy_data
+
+
+def plot_image(data):
+    mers_comment = data[0]
+    mers_money = data[2]
+    mers_fake_rate = data[3]
+    customers_bound = data[4]
+    reg_find = data[5]
