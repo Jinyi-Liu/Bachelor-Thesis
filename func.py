@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 
-
 def comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, cus):
     """
     May be need some changes on the comment method? E.g. if the good price is high then the comment will be more strong?
@@ -53,11 +52,17 @@ def gen_regulator_model(**reg_change_par):
     return regulator
 
 
-def gen_models(mer_num=5, cus_num=100, regulators_num=5):
-    merchants = [gen_mer_model(ID=i) for i in range(mer_num)]+[gen_mer_model(ID=i, fake_rate=[.0 for j in range(global_par['total_good_kinds'])]) for i in range(mer_num, 2 * mer_num)]
+def gen_models(mer_num=5, cus_num=100, regulators_num=5, **change_par):
+    cus_change_par = change_par['cus']
+    mer_change_par = change_par['mer']
+    reg_change_par = change_par['reg']
+    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(mer_num)]
+    #            + [
+    #    gen_mer_model(ID=i, fake_rate=[.0 for j in range(global_par['total_good_kinds'])]) for i in
+    #    range(mer_num, 2 * mer_num)]
     # merchants = [gen_mer_model(i,fake_rate=[.0,.0,.0,.0]) for i in range(mer_num)]
-    customers = [gen_cus_model(ID=i) for i in range(cus_num)]
-    regulators = [gen_regulator_model(ID=i) for i in range(regulators_num)]
+    customers = [gen_cus_model(ID=i, **cus_change_par) for i in range(cus_num)]
+    regulators = [gen_regulator_model(ID=i, **reg_change_par) for i in range(regulators_num)]
     return merchants, customers, regulators
 
 
@@ -86,8 +91,8 @@ def change_fake_rate(mers):
         mer.fake_change()
 
 
-def game(game_rounds=6000):
-    mers, customers, regs = gen_models()
+def game(game_rounds=6000,**change_par):
+    mers, customers, regs = gen_models(**change_par)
     all_round_data = []
     buy_data = [[None for i in range(len(customers))] for j in range(game_rounds)]
     for game_round in range(game_rounds):
