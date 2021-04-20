@@ -21,26 +21,34 @@ class Merchant:
         self.real_cost = par['real_cost']
         self.real_price = par['real_price']
 
-        self.decrease_fake_bound = par['decrease_fake_bound']  # If the comment hit the bound, then the merchant will decrease the fake rate
+        self.decrease_fake_bound = par[
+            'decrease_fake_bound']  # If the comment hit the bound, then the merchant will decrease the fake rate
         self.decrease_fake_rate = par['decrease_fake_rate']
-        self.increase_fake_bound = par['increase_fake_bound']  # When the bound is approached, the opportunistic merchant will increase the
+        self.increase_fake_bound = par[
+            'increase_fake_bound']  # When the bound is approached, the opportunistic merchant will increase the
         # fake rate.
         self.increase_fake_rate = par['increase_fake_rate']
+        self.change_fake_rate = par['change_fake_rate']
         self.sell_count = 0  # times the merchant sells goods.
         self.punished_count = 0  # how many times the merchant be punished
         self.money = 0
 
     def fake_change(self):
+        if not self.change_fake_rate:
+            return 0
         if self.comment < self.decrease_fake_bound:
-            self.fake_rate *= self.decrease_fake_rate
+            self.fake_rate -= self.decrease_fake_rate
         elif self.comment > self.increase_fake_bound:
-            self.fake_rate *= self.increase_fake_rate
+            self.fake_rate += self.increase_fake_rate
             self.fake_rate[self.fake_rate >= 1] = 1
         # self.fake_rate[np.logical_and( 0.001 < self.fake_rate, self.fake_rate <= fake_rate_lower_bound)] = fake_rate_lower_bound
         self.fake_rate[self.fake_rate >= fake_rate_upper_bound] = fake_rate_upper_bound
+        self.fake_rate[self.fake_rate <= 0] = 0
 
     def punished(self):
         pass
+        # self.fake_rate[self.fake_rate >= 0] = 0
+        # self.change_fake_rate=False
 
     def adjust_comment(self):
         if self.comment < 0:
@@ -57,8 +65,8 @@ class Customer:
         self.identify_fake_rate = par['identify_fake_rate']
         self.buy_bound_change_real = par['buy_bound_change_real']
         self.buy_bound_change_fake = par['buy_bound_change_fake']
-        self.buy_comment_change_real = par['buy_comment_change_real']  # After buying something, the comment customer makes.
-        self.buy_comment_change_fake = par['buy_comment_change_fake']
+        self.buy_comment_real = par['buy_comment_real']  # After buying something, the comment customer makes.
+        self.buy_comment_fake = par['buy_comment_fake']
         self.prob_random_buy = par['prob_random_buy']  # Irrational customer.
         #  Parameter TBD
 
@@ -136,12 +144,14 @@ class Regulator:
         self.ID = par['ID']
         self.lazy_identify_rate = par['lazy_identify_rate']  # Lazily regulate.
         self.lazy_cost_rate = par['lazy_cost_rate']
-        self.diligent_identify_rate = par['diligent_identify_rate']  # The ability to spot the fake when diligently regulate the market.
+        self.diligent_identify_rate = par[
+            'diligent_identify_rate']  # The ability to spot the fake when diligently regulate the market.
         self.diligent_cost_rate = par['diligent_cost_rate']
         self.punishment_money_multiple = par['punishment_money_multiple']
         self.punishment_comment = par['punishment_comment']
         self.fine_got = 0
         self.check_cost = 0
+        self.whether_check_market = par['whether_check_market']
         # self.make_public = True
 
     def check_market(self, lazy=None, mers=None, ):
@@ -149,6 +159,8 @@ class Regulator:
         To check the market.
         :return:
         """
+        if not self.whether_check_market:
+            return 0
         merchant2check = choice(mers)
         good2check = choice(merchant2check.good_kind)
         fake_rate = merchant2check.fake_rate[good2check]
@@ -172,6 +184,7 @@ class Regulator:
         mer.money -= punishment_money
         mer.comment -= self.punishment_comment
         mer.comment = .0 if mer.comment < .0 else mer.comment
+        mer.punished()
         self.fine_got += punishment_money
         self.check_cost += good_price * (self.lazy_cost_rate if lazy else self.diligent_cost_rate)
 

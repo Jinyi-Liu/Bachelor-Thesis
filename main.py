@@ -1,14 +1,30 @@
 from func import *
+from default_par import *
 
-#mers, cus, regs=gen_models()
-# buy_data = [perceive_type, mer2buy_id, good_kind, true_type]
 cus_change_par = {}
 reg_change_par = {}
 mer_change_par = {}
-change_par = {
-    'cus': cus_change_par,
-    'reg': reg_change_par,
-    'mer': mer_change_par
-}
-data, buy_data = game(**change_par)
-plot_image(data)
+
+
+def gen_change_par(_cus_change_par={}, _reg_change_par={}, _mer_change_par={}):
+    _change_par = {
+        'cus': _cus_change_par,
+        'reg': _reg_change_par,
+        'mer': _mer_change_par
+    }
+    return _change_par
+
+
+# cus_change_par['identify_fake_rate'] = [0.6, 0.3, 0.15, 0.3]
+mer_change_par['change_fake_rate'] = False
+cus_change_par['identify_fake_rate'] = [1., 1., 1., 1.]
+cus_change_par['prob_random_buy'] = 0.2
+change_par = gen_change_par(cus_change_par, reg_change_par, mer_change_par)
+#merchants, customers, regulators = gen_models(**change_par)
+par_set = [parameter_no_review_no_regulator,parameter_with_review_no_regulator,parameter_with_review_with_regulator]
+for par in par_set[1:]:
+    merchants, customers, regulators = gen_models(**par)
+    data, buy_data = game(game_rounds=5000, merchants=merchants, customers=customers, regulators=regulators)
+    plot_image(data, )
+
+
