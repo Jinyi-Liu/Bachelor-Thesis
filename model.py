@@ -2,20 +2,18 @@ import numpy as np
 from random import seed, random, choice, choices
 from default_par import general_par
 
-seed(1)
-comment_bound = general_par['comment_bound']
-fake_rate_lower_bound = general_par['fake_rate_lower_bound']
-fake_rate_upper_bound = general_par['fake_rate_lower_bound']
-
 
 class Merchant:
     def __init__(self, **par):
         self.ID = par['ID']
         self.comment = par['comment']
+        self.comment_bound = par['comment_bound']
         self.comment_count = par['comment_count']
 
         self.good_kind = par['good_kind']
         self.fake_rate = np.array(par['fake_rate'])
+        self.fake_rate_lower_bound = par['fake_rate_lower_bound']
+        self.fake_rate_upper_bound = par['fake_rate_upper_bound']
 
         self.fake_cost = par['fake_cost']
         self.fake_price = par['fake_price']
@@ -30,6 +28,7 @@ class Merchant:
         # fake rate.
         self.increase_fake_rate = par['increase_fake_rate']
         self.change_fake_rate = par['change_fake_rate']
+
         self.sell_count = 0  # times the merchant sells goods.
         self.punished_count = 0  # how many times the merchant be punished
         self.money = 0
@@ -43,7 +42,7 @@ class Merchant:
             self.fake_rate += self.increase_fake_rate
             self.fake_rate[self.fake_rate >= 1] = 1
         # self.fake_rate[np.logical_and( 0.001 < self.fake_rate, self.fake_rate <= fake_rate_lower_bound)] = fake_rate_lower_bound
-        self.fake_rate[self.fake_rate >= fake_rate_upper_bound] = fake_rate_upper_bound
+        self.fake_rate[self.fake_rate >= self.fake_rate_upper_bound] = self.fake_rate_upper_bound
         self.fake_rate[self.fake_rate <= 0] = 0
 
     def punished(self):
@@ -54,8 +53,8 @@ class Merchant:
     def adjust_comment(self):
         if self.comment < 0:
             self.comment = 0
-        if self.comment > comment_bound:
-            self.comment = comment_bound
+        if self.comment > self.comment_bound :
+            self.comment = self.comment_bound
 
 
 class Customer:
