@@ -47,7 +47,7 @@ def gen_models(mer_num=5, cus_num=100, regulators_num=5, **change_par):
     mer_change_par = change_par['mer']
     reg_change_par = change_par['reg']
     merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(mer_num)] + [
-        gen_mer_model(ID=i, fake_rate=[.0 for j in range(global_par['total_good_kinds'])], change_fake_rate=False) for i
+        gen_mer_model(ID=i, fake_rate=[.0 for j in range(general_par['total_good_kinds'])], change_fake_rate=False) for i
         in
         range(mer_num, 2 * mer_num)]
     # merchants = [gen_mer_model(i,fake_rate=[.0,.0,.0,.0]) for i in range(mer_num)]
@@ -127,6 +127,6 @@ def plot_image(data):
     axes[1, 0].set_title("Merchants' Profit")
     axes[1, 0].legend([handle for i, handle in enumerate(handles) if i in display],
                       ['Selling fake', 'Not selling fake'])
-    customers_bound.mean().plot(ax=axes[1, 1], legend=False)
+    customers_bound.mean().hist(ax=axes[1, 1],grid=False)
     axes[1, 1].set_title("Customers' Bound")
     plt.show()

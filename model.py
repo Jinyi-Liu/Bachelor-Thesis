@@ -1,10 +1,11 @@
 import numpy as np
 from random import seed, random, choice, choices
+from default_par import general_par
 
 seed(1)
-comment_bound = 10
-fake_rate_lower_bound = 0.01
-fake_rate_upper_bound = 0.8
+comment_bound = general_par['comment_bound']
+fake_rate_lower_bound = general_par['fake_rate_lower_bound']
+fake_rate_upper_bound = general_par['fake_rate_lower_bound']
 
 
 class Merchant:
