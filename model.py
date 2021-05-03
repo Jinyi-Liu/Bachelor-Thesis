@@ -1,6 +1,5 @@
 import numpy as np
-from random import seed, random, choice, choices
-from default_par import general_par
+from random import random, choice, choices
 
 
 class Merchant:
@@ -9,6 +8,7 @@ class Merchant:
         self.comment = par['comment']
         self.comment_bound = par['comment_bound']
         self.comment_count = par['comment_count']
+        self.comment_system = par['comment_system']
 
         self.good_kind = par['good_kind']
         self.fake_rate = np.array(par['fake_rate'])
@@ -53,7 +53,7 @@ class Merchant:
     def adjust_comment(self):
         if self.comment < 0:
             self.comment = 0
-        if self.comment > self.comment_bound :
+        if self.comment > self.comment_bound:
             self.comment = self.comment_bound
 
 
@@ -106,14 +106,14 @@ class Customer:
         if index == 0:  # No merchant to buy.
             return -1, None, None, None
         merchant2buy = choice(mers[:index])
-        good_kind = good2buy
+        good_kind = good2buy  # type of good to be bought
         fake_rate = merchant2buy.fake_rate[good_kind]
         identify_fake_rate = self.identify_fake_rate[good_kind]  # rate for identifying such good
         rand = random()
         perceive_type = True  # Customer's thought
         true_type = True  # Goods real type
 
-        if rand <= fake_rate:  # sells fake good
+        if rand <= fake_rate:  # selling fake
             found_fake = True
             # found by the customer
             if choices([found_fake, False], [identify_fake_rate, 1 - identify_fake_rate])[0]:
@@ -126,7 +126,7 @@ class Customer:
                 true_type = False
                 perceive_type = True
         else:
-            # Sold real
+            # selling real
             # Default
             self.change_bound(True)
 
@@ -161,28 +161,31 @@ class Regulator:
         """
         if not self.whether_check_market:
             return 0
-        merchant2check = choice(mers)
+        merchant2check = choice(mers)  # merchant to be checked.
         good2check = choice(merchant2check.good_kind)
         fake_rate = merchant2check.fake_rate[good2check]
         fake_price = merchant2check.fake_price[good2check]
-        rand = random()
-        if rand <= fake_rate:  # the merchant sells fake good
+        rand_false = random()
+        true_type = True
+        if rand_false <= fake_rate:  # the merchant sells fake good
             rand_identify = random()
+            true_type = False
             if lazy:  # the regulator is lazy
-                # Merchant sold fake good and was caught.
                 if self.lazy_identify_rate >= rand_identify:
-                    self.punish(fake_price, True, merchant2check)
-                    # TBD
+                    # Merchant sold fake good and was caught.
+                    self.punish(fake_price, lazy=True, mer=merchant2check)
             else:  # the regulator is diligent
                 if self.diligent_identify_rate >= rand_identify:
-                    self.punish(fake_price, False, merchant2check)
-                    # TBD
+                    self.punish(fake_price, lazy=False, mer=merchant2check)
+
+        merchant2check.money += revenue(true_type, good2check, merchant2check)
 
     def punish(self, good_price=None, lazy=None, mer=None):
         mer.punished_count += 1
         punishment_money = self.punishment_money_multiple * good_price
         mer.money -= punishment_money
-        mer.comment -= self.punishment_comment
+        if mer.comment_system:
+            mer.comment -= self.punishment_comment
         mer.comment = .0 if mer.comment < .0 else mer.comment
         mer.punished()
         self.fine_got += punishment_money
@@ -217,7 +220,6 @@ def bound_choose(mers, mers_num, bound):
 
 
 def revenue(real=None, good_kind=None, merchant2buy=None):
-    good_kind = good_kind
     if not real:
         price = merchant2buy.fake_price[good_kind]
         cost = merchant2buy.fake_cost[good_kind]

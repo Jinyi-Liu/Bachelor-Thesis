@@ -2,19 +2,24 @@ import numpy as np
 
 # Global parameters
 general_par = {
-    'total_good_kinds': 4,
     'fake_margin': 0.2,
     "real_margin": 0.5,
-    "fake_price_efficiency": 0.9,
-    'fake_rate_lower_bound': 0.01,
-    'fake_rate_upper_bound': 0.5,
+    "fake_price_coefficient": 1,
+    "real_price": [10],
+    'buy_good_prob': [1],
+    'identify_fake_rate': [0.05],
+    'fake_rate': np.array([0.3]),
+    'comment_system': True,
 }
-
+general_par["total_good_kinds"] = len(general_par["real_price"])
+general_par["real_cost"] = [general_par['real_margin'] * price for price in general_par['real_price']]
+general_par["fake_price"] = list(np.array(general_par["fake_price_coefficient"]) * np.array(general_par["real_price"]))
+general_par["fake_cost"] = list(np.array(general_par['fake_price']*np.array(general_par['fake_margin'])))
 # Merchant's default parameter
 good_kind = [x for x in range(general_par['total_good_kinds'])]
-real_p_par = [10, 100, 500, 5000]  # real_price
-real_c_par = [general_par['real_margin'] * price for price in real_p_par]  # real_cost
-fake_p_par = [general_par['fake_price_efficiency'] * price for price in real_p_par]  # fake_price
+real_p_par = general_par['real_price']
+real_c_par = general_par['real_cost']
+fake_p_par = [general_par['fake_price_coefficient'] * price for price in real_p_par]  # fake_price
 fake_c_par = [general_par['fake_margin'] * fake_price for fake_price in fake_p_par]  # fake_cost
 
 merchant_par = {
@@ -22,7 +27,7 @@ merchant_par = {
     'comment_bound': 10,
     'comment_count': 0,
     'good_kind': good_kind,
-    'fake_rate': np.array([.50, .30, .10, .05]),
+    'fake_rate': general_par['fake_rate'],
     'fake_rate_lower_bound': 0,
     'fake_rate_upper_bound': 0.5,
     'fake_price': fake_p_par,
@@ -33,14 +38,15 @@ merchant_par = {
     'decrease_fake_rate': 0.05,
     'increase_fake_bound': 8,
     'increase_fake_rate': 0.02,
-    'honest': False
+    'change_fake_rate': False,
+    'comment_system': general_par['comment_system'],
 }
 
 # Customer's default parameter
 customer_par = {
     'buy_bound': 5,
-    'buy_good_prob': [0.4, 0.3, 0.2, 0.1],
-    'identify_fake_rate': [0.05, 0.1, 0.15, 0.3],
+    'buy_good_prob': general_par['buy_good_prob'],
+    'identify_fake_rate': general_par['identify_fake_rate'],
     'buy_bound_change_real': 0.2,
     'buy_bound_change_fake': 0.5,
     'buy_comment_real': 1 * merchant_par['comment_bound'],
@@ -59,9 +65,10 @@ regulator_par = {
     'whether_check_market': True
 }
 
-parameter_no_review_no_regulator = {
+parameter_no_review_no_regulator_no_change = {
     'mer': {
         'change_fake_rate': False,
+        'comment_system': False,
     },
     'cus': {
         'buy_bound_change_real': 0,
@@ -75,9 +82,10 @@ parameter_no_review_no_regulator = {
     },
 }
 
-parameter_no_review_with_regulator = {
+parameter_no_review_with_regulator_no_change = {
     'mer': {
         'change_fake_rate': False,
+        'comment_system': False,
     },
     'cus': {
         'buy_bound_change_real': 0,
@@ -91,15 +99,16 @@ parameter_no_review_with_regulator = {
     },
 }
 
-parameter_with_review_no_regulator = {
+parameter_with_review_no_regulator_no_change = {
     'mer': {
-        'change_fake_rate': True,
+        'change_fake_rate': False,
+        'comment_system': True
     },
     'cus': {
         'buy_bound_change_real': .2,
         'buy_bound_change_fake': 2,
-        'buy_comment_real': 1 * merchant_par['comment_bound'],
-        'buy_comment_fake': .2 * merchant_par['comment_bound'],
+        'buy_comment_real': 1 * merchant_par['comment_bound'],  # highest comment, i.e., 10
+        'buy_comment_fake': .2 * merchant_par['comment_bound'],  # give a comment of 2
         'prob_random_buy': 0,
     },
     'reg': {
@@ -107,9 +116,10 @@ parameter_with_review_no_regulator = {
     },
 }
 
-parameter_with_review_with_regulator = {
+parameter_with_review_with_regulator_no_change = {
     'mer': {
-        'change_fake_rate': True,
+        'change_fake_rate': False,
+        'comment_system': True,
     },
     'cus': {
         'buy_bound_change_real': .2,
@@ -120,5 +130,39 @@ parameter_with_review_with_regulator = {
     },
     'reg': {
         'whether_check_market': True
+    },
+}
+
+parameter_with_review_no_regulator_with_change = {
+    'mer': {
+        'change_fake_rate': True,
+        'comment_system': True,
+    },
+    'cus': {
+        'buy_bound_change_real': .2,
+        'buy_bound_change_fake': 2,
+        'buy_comment_real': 1 * merchant_par['comment_bound'],
+        'buy_comment_fake': .2 * merchant_par['comment_bound'],
+        'prob_random_buy': 0,
+    },
+    'reg': {
+        'whether_check_market': False,
+    },
+}
+
+parameter_with_review_with_regulator_with_change = {
+    'mer': {
+        'change_fake_rate': True,
+        'comment_system': True,
+    },
+    'cus': {
+        'buy_bound_change_real': .2,
+        'buy_bound_change_fake': 2,
+        'buy_comment_real': 1 * merchant_par['comment_bound'],
+        'buy_comment_fake': .2 * merchant_par['comment_bound'],
+        'prob_random_buy': 0,
+    },
+    'reg': {
+        'whether_check_market': True,
     },
 }

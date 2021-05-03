@@ -84,6 +84,7 @@ def change_fake_rate(mers):
 def game(game_rounds=None, merchants=None, customers=None, regulators=None):
     all_round_data = []
     buy_data = [[None for i in range(len(customers))] for j in range(game_rounds)]
+    whether_comment_system = merchants[0].comment_system
     for game_round in range(game_rounds):
         comment_temp = np.zeros((2, len(merchants)))
         for cus_id in range(len(customers)):
@@ -92,7 +93,9 @@ def game(game_rounds=None, merchants=None, customers=None, regulators=None):
             perceive_type, mer2buy_id, good_kind, true_type = customers[cus_id].buy(merchants, len(merchants), good2buy)
             if perceive_type == -1:
                 continue  # i.e. no merchant for buying so pass this customer
-            comment_temp = comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, customers[cus_id])
+            if whether_comment_system:
+                comment_temp = comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp,
+                                                    customers[cus_id])
             buy_data[game_round][cus_id] = [perceive_type, mer2buy_id, good_kind, true_type]
         adjust_one_round_comment(merchants, comment_temp)
         change_fake_rate(merchants)
