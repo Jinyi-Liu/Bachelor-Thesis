@@ -166,3 +166,20 @@ parameter_with_review_with_regulator_with_change = {
         'whether_check_market': True,
     },
 }
+
+parameter_with_review_with_regulator_with_change_with_random = {
+    'mer': {
+        'change_fake_rate': True,
+        'comment_system': True,
+    },
+    'cus': {
+        'buy_bound_change_real': .2,
+        'buy_bound_change_fake': 2,
+        'buy_comment_real': 1 * merchant_par['comment_bound'],
+        'buy_comment_fake': .2 * merchant_par['comment_bound'],
+        'prob_random_buy': 0.1,
+    },
+    'reg': {
+        'whether_check_market': True,
+    },
+}

@@ -105,7 +105,8 @@ class Customer:
         index = random_choose(index, mers_num, self.prob_random_buy)  # irrational: randomly choose someone to buy.
         if index == 0:  # No merchant to buy.
             return -1, None, None, None
-        merchant2buy = choice(mers[:index])
+        weights = [_.comment+self.prob_random_buy for _ in mers[:index]]  # to ensure that comment 0 still could be bought.
+        merchant2buy = choices(mers[:index], weights)[0]
         good_kind = good2buy  # type of good to be bought
         fake_rate = merchant2buy.fake_rate[good_kind]
         identify_fake_rate = self.identify_fake_rate[good_kind]  # rate for identifying such good
@@ -161,7 +162,9 @@ class Regulator:
         """
         if not self.whether_check_market:
             return 0
-        merchant2check = choice(mers)  # merchant to be checked.
+        weight = mers[0].comment_bound - np.array([mer.comment for mer in mers]) + 1
+        # merchant2check = choice(mers)
+        merchant2check = choices(mers, weight)[0]  # merchant to be checked.
         good2check = choice(merchant2check.good_kind)
         fake_rate = merchant2check.fake_rate[good2check]
         fake_price = merchant2check.fake_price[good2check]

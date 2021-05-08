@@ -42,15 +42,15 @@ def gen_regulator_model(**reg_change_par):
     return regulator
 
 
-def gen_models(mer_num=5, cus_num=100, regulators_num=5, **change_par):
+def gen_models(honest_mer_num=5, speculative_mer_num=5, cus_num=100, regulators_num=5, **change_par):
     cus_change_par = change_par['cus']
     mer_change_par = change_par['mer']
     reg_change_par = change_par['reg']
-    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(mer_num)] + [
-        gen_mer_model(ID=i, fake_rate=[.0 for j in range(general_par['total_good_kinds'])], change_fake_rate=False) for i
+    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(speculative_mer_num)] + [
+        gen_mer_model(ID=i, fake_rate=[.0 for j in range(general_par['total_good_kinds'])], change_fake_rate=False) for
+        i
         in
-        range(mer_num, 2 * mer_num)]
-    # merchants = [gen_mer_model(i,fake_rate=[.0,.0,.0,.0]) for i in range(mer_num)]
+        range(speculative_mer_num, honest_mer_num + speculative_mer_num)]
     customers = [gen_cus_model(ID=i, **cus_change_par) for i in range(cus_num)]
     regulators = [gen_regulator_model(ID=i, **reg_change_par) for i in range(regulators_num)]
     return merchants, customers, regulators
@@ -70,7 +70,7 @@ def get_one_round_data(merchants, customers, regulators):
     mers_comment = [mer.comment for mer in merchants]
     mers_comment_count = [mer.comment_count for mer in merchants]
     mers_money = [mer.money for mer in merchants]
-    mers_fake_rate = [list(mer.fake_rate) for mer in merchants]  # interesting!
+    mers_fake_rate = [list(mer.fake_rate) for mer in merchants]
     customers_bound = [c.buy_bound for c in customers]
     reg = [reg.fine_got for reg in regulators]
     return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound, reg]
@@ -107,29 +107,43 @@ def game(game_rounds=None, merchants=None, customers=None, regulators=None):
     return all_round_data, buy_data
 
 
-def plot_image(data):
+
+
+def plot_image(data, title):
+    display = [0, 5]
     mers_num = len(data[0][0])
-    cus_num = 100
-    reg_num = 5
+    cus_num = len(data[0][4])
+    reg_num = len(data[0][5])
     mers_comment = pd.DataFrame([_[0] for _ in data], columns=[i for i in range(mers_num)])
     mers_money = pd.DataFrame([_[2] for _ in data], columns=[i for i in range(mers_num)])
-    mers_fake_rate = pd.DataFrame([_[3] for _ in data], columns=[i for i in range(mers_num)])
-    customers_bound = pd.DataFrame([_[4] for _ in data], columns=[i for i in range(cus_num)])
-    reg_find = pd.DataFrame([_[5] for _ in data], columns=[i for i in range(reg_num)])
+    mers_fake_rate = pd.DataFrame([[a[0] for a in (_[3])] for _ in data], columns=[i for i in range(mers_num)])
+    customers_bound_temp = pd.DataFrame([_[4] for _ in data], columns=[i for i in range(cus_num)])
+    customers_bound = customers_bound_temp.mean(axis=1)
+    reg_fine = pd.DataFrame([_[5] for _ in data], columns=[i for i in range(reg_num)])
     fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=300)
-    color = [cm.autumn(i) for i in range(1, 20, 4)] + [cm.winter(i) for i in range(1, 20, 4)]
-    mers_comment.plot(ax=axes[0, 0], color=color)
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    display = [0, 5]
+    color = ['r' for i in range(5)] + ['b' for i in range(5)]
+
+    axes[0, 0].plot(mers_comment)
+    for i, j in enumerate(axes[0, 0].lines):
+        j.set_color(color[i])
+        j.set_label('Selling fake' if i < 5 else 'Not Selling fake')
+
     axes[0, 0].set_title("Merchants' Comments")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
     axes[0, 0].legend([handle for i, handle in enumerate(handles) if i in display],
                       ['Selling fake', 'Not selling fake'])
-    reg_find.plot(ax=axes[0, 1])
     axes[0, 1].set_title("Fine")
-    mers_money.plot(ax=axes[1, 0], color=color)
+    axes[0, 1].plot(reg_fine)
+
     axes[1, 0].set_title("Merchants' Profit")
     axes[1, 0].legend([handle for i, handle in enumerate(handles) if i in display],
                       ['Selling fake', 'Not selling fake'])
-    customers_bound.mean().hist(ax=axes[1, 1],grid=False)
+    axes[1, 0].plot(mers_money)
+    for i, j in enumerate(axes[1, 0].lines):
+        j.set_color(color[i])
+
     axes[1, 1].set_title("Customers' Bound")
+    axes[1, 1].plot(customers_bound)
+    fig.suptitle(title,fontsize=20)
     plt.show()
+    #plt.savefig('A'+title)
