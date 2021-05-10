@@ -4,6 +4,8 @@ from random import random, choice, choices
 
 class Merchant:
     def __init__(self, **par):
+        self.speculative_num = par['speculative_num']
+        self.honest_num = par['honest_num']
         self.ID = par['ID']
         self.comment = par['comment']
         self.comment_bound = par['comment_bound']
@@ -59,6 +61,7 @@ class Merchant:
 
 class Customer:
     def __init__(self, **par):
+        self.num = par['num']
         self.ID = par['ID']
         self.buy_bound = par['buy_bound']
         self.buy_good_prob = par['buy_good_prob']  # the probability of buying each good in one round
@@ -67,7 +70,9 @@ class Customer:
         self.buy_bound_change_fake = par['buy_bound_change_fake']
         self.buy_comment_real = par['buy_comment_real']  # After buying something, the comment customer makes.
         self.buy_comment_fake = par['buy_comment_fake']
+        self.prob_comment_on_real = par['prob_comment_on_real']
         self.prob_random_buy = par['prob_random_buy']  # Irrational customer.
+        self.buy_with_weights = par['buy_with_weights']
         #  Parameter TBD
 
     def change_bound(self, perceive_real=None):
@@ -96,6 +101,7 @@ class Customer:
     def buy(self, mers, mers_num, good2buy):
         """
         Act.
+        :param select_with_weights:
         :param good2buy:
         :param mers: from _mers to choose someone to buy
         :param mers_num:
@@ -105,8 +111,12 @@ class Customer:
         index = random_choose(index, mers_num, self.prob_random_buy)  # irrational: randomly choose someone to buy.
         if index == 0:  # No merchant to buy.
             return -1, None, None, None
-        weights = [_.comment+self.prob_random_buy for _ in mers[:index]]  # to ensure that comment 0 still could be bought.
-        merchant2buy = choices(mers[:index], weights)[0]
+        if self.buy_with_weights:
+            # to ensure that comment 0 still could be bought.
+            weights = [_.comment + self.prob_random_buy for _ in mers[:index]]
+            merchant2buy = choices(mers[:index], weights)[0]
+        else:
+            merchant2buy = choice(mers[:index])
         good_kind = good2buy  # type of good to be bought
         fake_rate = merchant2buy.fake_rate[good_kind]
         identify_fake_rate = self.identify_fake_rate[good_kind]  # rate for identifying such good
@@ -142,6 +152,7 @@ class Regulator:
 
         :param par:
         """
+        self.num = par['num']
         self.ID = par['ID']
         self.lazy_identify_rate = par['lazy_identify_rate']  # Lazily regulate.
         self.lazy_cost_rate = par['lazy_cost_rate']
@@ -153,35 +164,46 @@ class Regulator:
         self.fine_got = 0
         self.check_cost = 0
         self.whether_check_market = par['whether_check_market']
+        self.check_with_weights = par['check_with_weights']
+        self.prob_random_check = par['prob_random_check']
+        self.lazy = par['lazy']
         # self.make_public = True
 
-    def check_market(self, lazy=None, mers=None, ):
+    def check_market(self, mers=None):
         """
         To check the market.
         :return:
         """
         if not self.whether_check_market:
             return 0
-        weight = mers[0].comment_bound - np.array([mer.comment for mer in mers]) + 1
-        # merchant2check = choice(mers)
-        merchant2check = choices(mers, weight)[0]  # merchant to be checked.
+        if self.check_with_weights:
+            # 0.1 is set to ensure that merchants with comment 10 still have a chance to be checked.
+            weight = mers[0].comment_bound - np.array([mer.comment for mer in mers])
+            merchant2check = choices(mers, weight)[0]
+        else:
+            merchant2check = choice(mers)
         good2check = choice(merchant2check.good_kind)
         fake_rate = merchant2check.fake_rate[good2check]
         fake_price = merchant2check.fake_price[good2check]
         rand_false = random()
         true_type = True
+        punished_mark = False
         if rand_false <= fake_rate:  # the merchant sells fake good
             rand_identify = random()
             true_type = False
-            if lazy:  # the regulator is lazy
+            if self.lazy:  # the regulator is lazy
                 if self.lazy_identify_rate >= rand_identify:
                     # Merchant sold fake good and was caught.
                     self.punish(fake_price, lazy=True, mer=merchant2check)
+                    punished_mark = True
             else:  # the regulator is diligent
                 if self.diligent_identify_rate >= rand_identify:
                     self.punish(fake_price, lazy=False, mer=merchant2check)
-
-        merchant2check.money += revenue(true_type, good2check, merchant2check)
+                    punished_mark = True
+        if not punished_mark:
+            merchant2check.money += revenue(true_type, good2check, merchant2check)
+        else:
+            merchant2check.money -= merchant2check.fake_cost[good2check]
 
     def punish(self, good_price=None, lazy=None, mer=None):
         mer.punished_count += 1

@@ -13,8 +13,15 @@ def comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, cus
     #    good_kind / total_good_kinds - 1)
     # comment_temp[0][mer2buy_id] += (
     #    cus.buy_comment_real if perceive_type else (cus.buy_comment_fake * exp(-1 * good_kind / total_good_kinds)))
-    comment_temp[0][mer2buy_id] += cus.buy_comment_real if perceive_type else cus.buy_comment_fake
-    comment_temp[1][mer2buy_id] += 1
+    prob_comment = random()  # i.e. ie prob_comment <* than the customer will comment on the merchant
+    if perceive_type:
+        if prob_comment <= cus.prob_comment_on_real[good_kind]:
+            comment_temp[0][mer2buy_id] += cus.buy_comment_real
+            comment_temp[1][mer2buy_id] += 1
+    else:
+        comment_temp[0][mer2buy_id] += cus.buy_comment_fake
+        comment_temp[1][mer2buy_id] += 1
+
     return comment_temp
 
 
@@ -42,17 +49,34 @@ def gen_regulator_model(**reg_change_par):
     return regulator
 
 
-def gen_models(honest_mer_num=5, speculative_mer_num=5, cus_num=100, regulators_num=5, **change_par):
+def get_num(par, change_par, select_num):
+    temp_num = change_par.get(select_num)
+    if temp_num:
+        return temp_num
+    else:
+        return par.get(select_num)
+
+
+def gen_models(**change_par):
     cus_change_par = change_par['cus']
     mer_change_par = change_par['mer']
     reg_change_par = change_par['reg']
-    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(speculative_mer_num)] + [
+    honest_num = get_num(merchant_par, mer_change_par, 'honest_num')
+    speculative_num = get_num(merchant_par, mer_change_par, 'speculative_num')
+    cus_num = get_num(customer_par, cus_change_par, 'num')
+    reg_num = get_num(regulator_par, reg_change_par, 'num')
+    # honest_num = merchant_par['honest_num'] if not mer_change_par.get('honest_num') else mer_change_par['honest_num']
+    # speculative_num = merchant_par['speculative_num'] if not mer_change_par.get('speculative_num') else mer_change_par['speculative_num']
+    # cus_num = customer_par['num'] if not cus_change_par.get('num') else cus_change_par['num']
+    # reg_num = regulator_par['num'] if not reg_change_par.get('num') else reg_change_par['num']
+
+    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(speculative_num)] + [
         gen_mer_model(ID=i, fake_rate=[.0 for j in range(general_par['total_good_kinds'])], change_fake_rate=False) for
         i
         in
-        range(speculative_mer_num, honest_mer_num + speculative_mer_num)]
+        range(speculative_num, honest_num + speculative_num)]
     customers = [gen_cus_model(ID=i, **cus_change_par) for i in range(cus_num)]
-    regulators = [gen_regulator_model(ID=i, **reg_change_par) for i in range(regulators_num)]
+    regulators = [gen_regulator_model(ID=i, **reg_change_par) for i in range(reg_num)]
     return merchants, customers, regulators
 
 
@@ -90,28 +114,29 @@ def game(game_rounds=None, merchants=None, customers=None, regulators=None):
         for cus_id in range(len(customers)):
             choice_weight = customers[cus_id].buy_good_prob
             good2buy = choices(merchants[0].good_kind, choice_weight)[0]
-            perceive_type, mer2buy_id, good_kind, true_type = customers[cus_id].buy(merchants, len(merchants), good2buy)
+            perceive_type, mer2buy_id, buy_good_kind, true_type = customers[cus_id].buy(merchants, len(merchants),
+                                                                                        good2buy)
             if perceive_type == -1:
                 continue  # i.e. no merchant for buying so pass this customer
             if whether_comment_system:
-                comment_temp = comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp,
+                comment_temp = comment_on_merchants(perceive_type, mer2buy_id, buy_good_kind, comment_temp,
                                                     customers[cus_id])
-            buy_data[game_round][cus_id] = [perceive_type, mer2buy_id, good_kind, true_type]
+            buy_data[game_round][cus_id] = [perceive_type, mer2buy_id, buy_good_kind, true_type]
         adjust_one_round_comment(merchants, comment_temp)
         change_fake_rate(merchants)
         temp = get_one_round_data(merchants, customers, regulators)
         all_round_data.append(temp)
         for reg in regulators:
-            reg.check_market(lazy=False, mers=merchants)
+            reg.check_market(mers=merchants)
 
     return all_round_data, buy_data
 
 
-
-
-def plot_image(data, title):
-    display = [0, 5]
-    mers_num = len(data[0][0])
+def plot_image(data, title,mers):
+    speculative_num = mers[0].speculative_num
+    honest_num = mers[0].honest_num
+    display = [0, speculative_num]
+    mers_num = speculative_num+honest_num
     cus_num = len(data[0][4])
     reg_num = len(data[0][5])
     mers_comment = pd.DataFrame([_[0] for _ in data], columns=[i for i in range(mers_num)])
@@ -121,12 +146,12 @@ def plot_image(data, title):
     customers_bound = customers_bound_temp.mean(axis=1)
     reg_fine = pd.DataFrame([_[5] for _ in data], columns=[i for i in range(reg_num)])
     fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=300)
-    color = ['r' for i in range(5)] + ['b' for i in range(5)]
+    color = ['r' for i in range(speculative_num)] + ['b' for i in range(honest_num)]
 
     axes[0, 0].plot(mers_comment)
     for i, j in enumerate(axes[0, 0].lines):
         j.set_color(color[i])
-        j.set_label('Selling fake' if i < 5 else 'Not Selling fake')
+        j.set_label('Selling fake' if i < speculative_num else 'Not Selling fake')
 
     axes[0, 0].set_title("Merchants' Comments")
     handles, labels = axes[0, 0].get_legend_handles_labels()
@@ -139,11 +164,13 @@ def plot_image(data, title):
     axes[1, 0].legend([handle for i, handle in enumerate(handles) if i in display],
                       ['Selling fake', 'Not selling fake'])
     axes[1, 0].plot(mers_money)
+    axes[1, 0].set_xlabel('round')
     for i, j in enumerate(axes[1, 0].lines):
         j.set_color(color[i])
 
-    axes[1, 1].set_title("Customers' Bound")
+    axes[1, 1].set_title("Customers' Average Bound")
     axes[1, 1].plot(customers_bound)
-    fig.suptitle(title,fontsize=20)
+    axes[1, 1].set_xlabel('round')
+    # fig.suptitle(title,fontsize=20)
     plt.show()
-    #plt.savefig('A'+title)
+    # plt.savefig('./images/'+title)
