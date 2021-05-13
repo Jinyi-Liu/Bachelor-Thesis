@@ -4,8 +4,9 @@ from default_par import *
 from model import *
 from math import exp
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib import cm
+import pickle
+from random import seed
+from _plot import *
 
 
 def comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, cus):
@@ -69,12 +70,20 @@ def gen_models(**change_par):
     # speculative_num = merchant_par['speculative_num'] if not mer_change_par.get('speculative_num') else mer_change_par['speculative_num']
     # cus_num = customer_par['num'] if not cus_change_par.get('num') else cus_change_par['num']
     # reg_num = regulator_par['num'] if not reg_change_par.get('num') else reg_change_par['num']
+    good_kind_change = mer_change_par.get('good_kind')
 
-    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(speculative_num)] + [
-        gen_mer_model(ID=i, fake_rate=[.0 for j in range(general_par['total_good_kinds'])], change_fake_rate=False) for
-        i
-        in
-        range(speculative_num, honest_num + speculative_num)]
+    total_good_kind = general_par['total_good_kinds'] if not good_kind_change else len(good_kind_change)
+
+    temp = {
+        'fake_rate': [.0 for j in range(total_good_kind)],
+        'change_fake_rate': False,
+    }
+    speculative_mer_par = copy.deepcopy(mer_change_par)
+    speculative_mer_par.update(temp)
+    speculative_mers = [gen_mer_model(ID=i, **speculative_mer_par) for i in
+                        range(speculative_num, honest_num + speculative_num)]
+    merchants = [gen_mer_model(ID=i, **mer_change_par) for i in range(speculative_num)] + speculative_mers
+
     customers = [gen_cus_model(ID=i, **cus_change_par) for i in range(cus_num)]
     regulators = [gen_regulator_model(ID=i, **reg_change_par) for i in range(reg_num)]
     return merchants, customers, regulators
@@ -112,10 +121,7 @@ def game(game_rounds=None, merchants=None, customers=None, regulators=None):
     for game_round in range(game_rounds):
         comment_temp = np.zeros((2, len(merchants)))
         for cus_id in range(len(customers)):
-            choice_weight = customers[cus_id].buy_good_prob
-            good2buy = choices(merchants[0].good_kind, choice_weight)[0]
-            perceive_type, mer2buy_id, buy_good_kind, true_type = customers[cus_id].buy(merchants, len(merchants),
-                                                                                        good2buy)
+            perceive_type, mer2buy_id, buy_good_kind, true_type = customers[cus_id].buy(merchants, len(merchants))
             if perceive_type == -1:
                 continue  # i.e. no merchant for buying so pass this customer
             if whether_comment_system:
@@ -132,45 +138,51 @@ def game(game_rounds=None, merchants=None, customers=None, regulators=None):
     return all_round_data, buy_data
 
 
-def plot_image(data, title,mers):
-    speculative_num = mers[0].speculative_num
-    honest_num = mers[0].honest_num
-    display = [0, speculative_num]
-    mers_num = speculative_num+honest_num
-    cus_num = len(data[0][4])
-    reg_num = len(data[0][5])
-    mers_comment = pd.DataFrame([_[0] for _ in data], columns=[i for i in range(mers_num)])
-    mers_money = pd.DataFrame([_[2] for _ in data], columns=[i for i in range(mers_num)])
-    mers_fake_rate = pd.DataFrame([[a[0] for a in (_[3])] for _ in data], columns=[i for i in range(mers_num)])
-    customers_bound_temp = pd.DataFrame([_[4] for _ in data], columns=[i for i in range(cus_num)])
-    customers_bound = customers_bound_temp.mean(axis=1)
-    reg_fine = pd.DataFrame([_[5] for _ in data], columns=[i for i in range(reg_num)])
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=300)
-    color = ['r' for i in range(speculative_num)] + ['b' for i in range(honest_num)]
+def monte_process_plot(data_set, mers_num):
+    speculative_num, honest_num = mers_num
+    spe_list = []
+    hon_list = []
+    for data in data_set:
+        mers_money = pd.DataFrame([_[2] for _ in data], columns=[i for i in range(sum(mers_num))])
+        spe = mers_money.iloc[:, :speculative_num]
+        hon = mers_money.iloc[:, speculative_num:sum(mers_num)]
+        temp_spe = spe.sort_values(by=999, axis=1).values.T if spe.ndim != 1 else spe.values.T
+        temp_hon = hon.sort_values(by=999, axis=1).values.T
+        spe_list.append(temp_spe)
+        hon_list.append(temp_hon)
+    spe_np = np.array(spe_list).mean(axis=0)
+    hon_np = np.array(hon_list).mean(axis=0)
+    total_ = np.vstack((spe_np, hon_np)).T
+    ave_money = pd.DataFrame(total_)
+    return ave_money
 
-    axes[0, 0].plot(mers_comment)
-    for i, j in enumerate(axes[0, 0].lines):
-        j.set_color(color[i])
-        j.set_label('Selling fake' if i < speculative_num else 'Not Selling fake')
 
-    axes[0, 0].set_title("Merchants' Comments")
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    axes[0, 0].legend([handle for i, handle in enumerate(handles) if i in display],
-                      ['Selling fake', 'Not selling fake'])
-    axes[0, 1].set_title("Fine")
-    axes[0, 1].plot(reg_fine)
+def output_single(pars, pars_titles, show):
+    for (par, title) in zip(pars, pars_titles):
+        seed(1)
+        merchants, customers, regulators = gen_models(**par)
+        data, buy_data = game(game_rounds=1000, merchants=merchants, customers=customers, regulators=regulators)
+        if show:
+            plot_image(data, title, mers=merchants, show=show)
+        else:
+            with open('./data/data-' + title + '.pk', 'wb') as f:
+                pickle.dump(data + buy_data, f)
+            plot_image(data, title, mers=merchants, show=show)
+        mer_profit = data[-1][2]
+        mer_comment = data[-1][0]
+        print(mer_comment)
+        print(np.mean(mer_profit[-5:]) / np.mean(mer_profit[:5]))
+        print(np.mean(mer_profit[:5]) / np.mean(mer_profit[-5:]))
 
-    axes[1, 0].set_title("Merchants' Profit")
-    axes[1, 0].legend([handle for i, handle in enumerate(handles) if i in display],
-                      ['Selling fake', 'Not selling fake'])
-    axes[1, 0].plot(mers_money)
-    axes[1, 0].set_xlabel('round')
-    for i, j in enumerate(axes[1, 0].lines):
-        j.set_color(color[i])
 
-    axes[1, 1].set_title("Customers' Average Bound")
-    axes[1, 1].plot(customers_bound)
-    axes[1, 1].set_xlabel('round')
-    # fig.suptitle(title,fontsize=20)
-    plt.show()
-    # plt.savefig('./images/'+title)
+def monte_process_data(par, title):
+    data_set = []
+    buy_data_set = []
+    for i in range(10):
+        seed(i)
+        merchants, customers, regulators = gen_models(**par)
+        data, buy_data = game(game_rounds=1000, merchants=merchants, customers=customers, regulators=regulators)
+        data_set.append(data)
+        buy_data_set.append(buy_data)
+    with open('./data/monte_data-' + title + '.pk', 'wb') as f:
+        pickle.dump(data_set + buy_data_set, f)

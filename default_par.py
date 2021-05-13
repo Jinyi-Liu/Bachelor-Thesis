@@ -7,7 +7,7 @@ general_par = {
     "real_margin": 0.5,
     "fake_price_coefficient": 1,
     "real_price": [10],
-    'buy_good_prob': [1],
+    'prob_buy_good': [1],
     'identify_fake_rate': [0.05],
     'fake_rate': np.array([0.3]),
     'comment_system': True,
@@ -38,21 +38,22 @@ merchant_par = {
     'real_price': real_p_par,
     'real_cost': real_c_par,
     'decrease_fake_bound': 3,
-    'decrease_fake_rate': 0.05,
+    'decrease_fake_rate': np.array([0.05]),
     'increase_fake_bound': 8,
-    'increase_fake_rate': 0.02,
+    'increase_fake_rate': np.array([0.02]),
     'change_fake_rate': False,
     'comment_system': general_par['comment_system'],
+    # 'fake_sell':[True],
 }
 
 # Customer's default parameter
 customer_par = {
     'num': 100,
     'buy_bound': 5,
-    'buy_good_prob': general_par['buy_good_prob'],
+    'prob_buy_good': general_par['prob_buy_good'],
     'identify_fake_rate': general_par['identify_fake_rate'],
-    'buy_bound_change_real': 0.2,
-    'buy_bound_change_fake': 0.5,
+    'buy_bound_change_real': [0.2],
+    'buy_bound_change_fake': [0.5],
     'buy_comment_real': 1 * merchant_par['comment_bound'],
     'buy_comment_fake': .5 * merchant_par['comment_bound'],
     'prob_random_buy': 0.0,
@@ -73,6 +74,7 @@ regulator_par = {
     'check_with_weights': False,
     'prob_random_check': 0,
     'lazy': False,
+    'prob_check_good': [1],
 }
 
 par_model_1_1 = {
@@ -141,9 +143,31 @@ par_model_6_4['cus']['prob_random_buy'] = 0.5
 par_model_6_4['reg']['prob_random_check'] = 0.5
 par_model_6_5 = copy.deepcopy(par_model_6_4)
 par_model_6_5['reg']['num'] = 1
-par_model_6_5['mer']['honest_num']=1
-par_model_6_5['mer']['speculative_num']=9
+par_model_6_5['mer']['honest_num'] = 5
+par_model_6_5['mer']['speculative_num'] = 5
 # par_model_6_5['reg']['lazy']=False
 # par_model_6_5['cus']
 
-# par_model_6_5
+par_model_7_1 = copy.deepcopy(par_model_6_5)
+cus_change = {
+    'prob_buy_good': [0.8, 0.2],
+    'identify_fake_rate': [0, 0.10],
+    'prob_comment_on_real': [0.2, 0.8],
+    'buy_bound_change_real': [0.2, 0.6],
+    'buy_bound_change_fake': [0.5, 1.5],
+}
+par_model_7_1['cus'].update(cus_change)
+mer_change = {
+    'good_kind': [i for i in range(2)],
+    'fake_cost': [0, 20],
+    'fake_price': [0, 100],
+    'real_cost': [5, 50],
+    'real_price': [10, 100],
+    'fake_rate': [0, 0.10],
+    'decrease_fake_rate': np.array([0, 0.05]),
+    'increase_fake_rate': np.array([0, 0.02]),
+}
+par_model_7_1['mer'].update(mer_change)
+par_model_7_1['reg']['prob_check_good'] = [0.8, 0.2]
+par_model_7_2 = copy.deepcopy(par_model_7_1)
+par_model_7_2['reg']['num'] = 5

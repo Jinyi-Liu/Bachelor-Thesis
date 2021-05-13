@@ -46,6 +46,9 @@ class Merchant:
         # self.fake_rate[np.logical_and( 0.001 < self.fake_rate, self.fake_rate <= fake_rate_lower_bound)] = fake_rate_lower_bound
         self.fake_rate[self.fake_rate >= self.fake_rate_upper_bound] = self.fake_rate_upper_bound
         self.fake_rate[self.fake_rate <= 0] = 0
+        # if there no fake for sell when fake_sell=False, the fake rate of it is set to 0
+        # self.fake_rate = [0 if fake_sell==False else rate for (rate,fake_sell) in zip(self.fake_rate,self.fake_sell)]
+
 
     def punished(self):
         pass
@@ -64,7 +67,7 @@ class Customer:
         self.num = par['num']
         self.ID = par['ID']
         self.buy_bound = par['buy_bound']
-        self.buy_good_prob = par['buy_good_prob']  # the probability of buying each good in one round
+        self.prob_buy_good = par['prob_buy_good']  # the probability of buying each good in one round
         self.identify_fake_rate = par['identify_fake_rate']
         self.buy_bound_change_real = par['buy_bound_change_real']
         self.buy_bound_change_fake = par['buy_bound_change_fake']
@@ -75,17 +78,18 @@ class Customer:
         self.buy_with_weights = par['buy_with_weights']
         #  Parameter TBD
 
-    def change_bound(self, perceive_real=None):
+    def change_bound(self, perceive_real=None,buy_good_kind=None):
         """
         Change the buy_bound if bought something genuine or fake.
         Need some changes on the bound changing process, e.g., functional change?
+        :param buy_good_kind:
         :param perceive_real:
         :return:
         """
         if perceive_real:
-            self.buy_bound -= self.buy_bound_change_real
+            self.buy_bound -= self.buy_bound_change_real[buy_good_kind]
         else:
-            self.buy_bound += self.buy_bound_change_fake
+            self.buy_bound += self.buy_bound_change_fake[buy_good_kind]
         if self.buy_bound < 0:
             self.buy_bound = 0
         elif self.buy_bound > 10:
@@ -98,7 +102,7 @@ class Customer:
         """
         pass
 
-    def buy(self, mers, mers_num, good2buy):
+    def buy(self, mers, mers_num):
         """
         Act.
         :param select_with_weights:
@@ -117,29 +121,29 @@ class Customer:
             merchant2buy = choices(mers[:index], weights)[0]
         else:
             merchant2buy = choice(mers[:index])
-        good_kind = good2buy  # type of good to be bought
+        good_kind = choices(merchant2buy.good_kind, self.prob_buy_good)[0]  # type of good to be bought
         fake_rate = merchant2buy.fake_rate[good_kind]
         identify_fake_rate = self.identify_fake_rate[good_kind]  # rate for identifying such good
         rand = random()
         perceive_type = True  # Customer's thought
         true_type = True  # Goods real type
 
-        if rand <= fake_rate:  # selling fake
+        if rand < fake_rate:  # selling fake
             found_fake = True
             # found by the customer
             if choices([found_fake, False], [identify_fake_rate, 1 - identify_fake_rate])[0]:
-                self.change_bound(False)
+                self.change_bound(False,good_kind)
                 true_type = False
                 perceive_type = False
             # Merchant sold fake but wasn't found by the customer.
             else:
-                self.change_bound(True)
+                self.change_bound(True,good_kind)
                 true_type = False
                 perceive_type = True
         else:
             # selling real
             # Default
-            self.change_bound(True)
+            self.change_bound(True,good_kind)
 
         merchant2buy.money += revenue(true_type, good_kind, merchant2buy)
         merchant2buy.sell_count += 1
@@ -167,6 +171,7 @@ class Regulator:
         self.check_with_weights = par['check_with_weights']
         self.prob_random_check = par['prob_random_check']
         self.lazy = par['lazy']
+        self.prob_check_good = par['prob_check_good']
         # self.make_public = True
 
     def check_market(self, mers=None):
@@ -182,7 +187,7 @@ class Regulator:
             merchant2check = choices(mers, weight)[0]
         else:
             merchant2check = choice(mers)
-        good2check = choice(merchant2check.good_kind)
+        good2check = choices(merchant2check.good_kind,self.prob_check_good)[0]
         fake_rate = merchant2check.fake_rate[good2check]
         fake_price = merchant2check.fake_price[good2check]
         rand_false = random()

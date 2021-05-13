@@ -1,4 +1,5 @@
 from func import *
+from _plot import *
 from default_par import *
 from random import seed
 import pickle
@@ -50,17 +51,10 @@ def gen_change_par(_general_change_par={}, _cus_change_par={}, _reg_change_par={
 
 # pars = [par_model_6_1, par_model_6_2,par_model_6_3,par_model_6_4]
 # pars_titles = ['model_6-1', 'model_6-2','model_6-3','model_6-4']
-pars = [par_model_6_5]
-pars_titles = ['6-5']
-for (par, title) in zip(pars, pars_titles):
-    seed(1)
-    merchants, customers, regulators = gen_models(**par)
-    data, buy_data = game(game_rounds=1000, merchants=merchants, customers=customers, regulators=regulators)
-    plot_image(data, title,mers=merchants)
-    # with open('./data/data-'+title+'.pk','wb') as f:
-    #     pickle.dump(data+buy_data, f)
-    mer_profit = data[-1][2]
-    mer_comment = data[-1][0]
-    print(mer_comment)
-    print(np.mean(mer_profit[-5:]) / np.mean(mer_profit[:5]))
-    print(np.mean(mer_profit[:5]) / np.mean(mer_profit[-5:]))
+pars = [par_model_7_1, par_model_7_2]
+pars_titles = ['model_7-1', 'model_7-2']
+
+# pars = [par_model_6_5]
+# pars_titles = ['test']
+
+output_single(pars, pars_titles, show=True)
