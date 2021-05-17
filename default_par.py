@@ -1,6 +1,13 @@
 import numpy as np
 import copy
 
+
+def update_par(default_par, par):
+    for key in default_par.keys():
+        default_par[key].update(par[key])
+    return default_par
+
+
 # Global parameters
 general_par = {
     'fake_margin': 0.2,
@@ -54,8 +61,8 @@ customer_par = {
     'identify_fake_rate': general_par['identify_fake_rate'],
     'buy_bound_change_real': [0.2],
     'buy_bound_change_fake': [0.5],
-    'buy_comment_real': 1 * merchant_par['comment_bound'],
-    'buy_comment_fake': .5 * merchant_par['comment_bound'],
+    'buy_comment_real': [1 * merchant_par['comment_bound']],
+    'buy_comment_fake': [.5 * merchant_par['comment_bound']],
     'prob_random_buy': 0.0,
     'prob_comment_on_real': [1.0],
     'buy_with_weights': False,
@@ -75,6 +82,7 @@ regulator_par = {
     'prob_random_check': 0,
     'lazy': False,
     'prob_check_good': [1],
+    'check_inside_market': True,
 }
 
 par_model_1_1 = {
@@ -93,6 +101,9 @@ par_model_1_1 = {
         'whether_check_market': False
     },
 }
+default_par = copy.deepcopy({'mer': merchant_par, 'cus': customer_par, 'reg': regulator_par})
+temp = update_par(default_par, par_model_1_1)
+par_model_1_1 = temp
 
 par_model_2_1 = copy.deepcopy(par_model_1_1)
 par_model_2_1['cus'] = customer_par
@@ -130,6 +141,14 @@ par_model_5_3['reg']['check_with_weights'] = True
 par_model_5_4 = copy.deepcopy(par_model_5_3)
 par_model_5_4['cus']['prob_random_buy'] = 0.5
 par_model_5_4['reg']['prob_random_check'] = 0.5
+par_model_5_5 = copy.deepcopy(par_model_5_4)
+par_model_5_5['reg']['num'] = 1
+par_model_5_6 = copy.deepcopy(par_model_5_5)
+par_model_5_6['mer']['honest_num'] = 9
+par_model_5_6['mer']['speculative_num'] = 1
+par_model_5_7 = copy.deepcopy(par_model_5_5)
+par_model_5_7['mer']['honest_num'] = 8
+par_model_5_7['mer']['speculative_num'] = 2
 
 par_model_6_1 = copy.deepcopy(par_model_5_1)
 par_model_6_1['mer']['change_fake_rate'] = True
@@ -155,6 +174,8 @@ cus_change = {
     'prob_comment_on_real': [0.2, 0.8],
     'buy_bound_change_real': [0.2, 0.6],
     'buy_bound_change_fake': [0.5, 1.5],
+    'buy_comment_real': [10, 10],
+    'buy_comment_fake': [5, 0],
 }
 par_model_7_1['cus'].update(cus_change)
 mer_change = {
@@ -171,3 +192,20 @@ par_model_7_1['mer'].update(mer_change)
 par_model_7_1['reg']['prob_check_good'] = [0.8, 0.2]
 par_model_7_2 = copy.deepcopy(par_model_7_1)
 par_model_7_2['reg']['num'] = 5
+
+par_model_7_3 = copy.deepcopy(par_model_7_2)
+par_model_7_3['mer'].update({'speculative_num': 1, 'honest_num': 9})
+
+par_model_7_4 = copy.deepcopy(par_model_7_3)
+par_model_7_4['reg']['num'] = 1
+
+par_model_7_5 = copy.deepcopy(par_model_7_3)  # 5 reg
+par_model_7_5['reg']['check_inside_market'] = False
+
+par_model_7_6 = copy.deepcopy(par_model_7_4)  # 1 reg
+par_model_7_6['reg']['check_inside_market'] = False
+
+par_model_7_7 = copy.deepcopy(par_model_7_1)
+par_model_7_7['reg']['check_inside_market'] = False
+par_model_7_8 = copy.deepcopy(par_model_7_2)
+par_model_7_8['reg']['check_inside_market'] = False

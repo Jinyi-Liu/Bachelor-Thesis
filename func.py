@@ -17,10 +17,10 @@ def comment_on_merchants(perceive_type, mer2buy_id, good_kind, comment_temp, cus
     prob_comment = random()  # i.e. ie prob_comment <* than the customer will comment on the merchant
     if perceive_type:
         if prob_comment <= cus.prob_comment_on_real[good_kind]:
-            comment_temp[0][mer2buy_id] += cus.buy_comment_real
+            comment_temp[0][mer2buy_id] += cus.buy_comment_real[good_kind]
             comment_temp[1][mer2buy_id] += 1
     else:
-        comment_temp[0][mer2buy_id] += cus.buy_comment_fake
+        comment_temp[0][mer2buy_id] += cus.buy_comment_fake[good_kind]
         comment_temp[1][mer2buy_id] += 1
 
     return comment_temp
@@ -105,8 +105,9 @@ def get_one_round_data(merchants, customers, regulators):
     mers_money = [mer.money for mer in merchants]
     mers_fake_rate = [list(mer.fake_rate) for mer in merchants]
     customers_bound = [c.buy_bound for c in customers]
-    reg = [reg.fine_got for reg in regulators]
-    return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound, reg]
+    reg_fine = [reg.fine_got for reg in regulators]
+    reg_cost = [reg.check_cost for reg in regulators]
+    return [mers_comment, mers_comment_count, mers_money, mers_fake_rate, customers_bound, reg_fine,reg_cost]
 
 
 def change_fake_rate(mers):
@@ -138,28 +139,9 @@ def game(game_rounds=None, merchants=None, customers=None, regulators=None):
     return all_round_data, buy_data
 
 
-def monte_process_plot(data_set, mers_num):
-    speculative_num, honest_num = mers_num
-    spe_list = []
-    hon_list = []
-    for data in data_set:
-        mers_money = pd.DataFrame([_[2] for _ in data], columns=[i for i in range(sum(mers_num))])
-        spe = mers_money.iloc[:, :speculative_num]
-        hon = mers_money.iloc[:, speculative_num:sum(mers_num)]
-        temp_spe = spe.sort_values(by=999, axis=1).values.T if spe.ndim != 1 else spe.values.T
-        temp_hon = hon.sort_values(by=999, axis=1).values.T
-        spe_list.append(temp_spe)
-        hon_list.append(temp_hon)
-    spe_np = np.array(spe_list).mean(axis=0)
-    hon_np = np.array(hon_list).mean(axis=0)
-    total_ = np.vstack((spe_np, hon_np)).T
-    ave_money = pd.DataFrame(total_)
-    return ave_money
-
-
-def output_single(pars, pars_titles, show):
+def output_single(pars, pars_titles, show, set_seed):
     for (par, title) in zip(pars, pars_titles):
-        seed(1)
+        seed(set_seed)
         merchants, customers, regulators = gen_models(**par)
         data, buy_data = game(game_rounds=1000, merchants=merchants, customers=customers, regulators=regulators)
         if show:
@@ -175,14 +157,49 @@ def output_single(pars, pars_titles, show):
         print(np.mean(mer_profit[:5]) / np.mean(mer_profit[-5:]))
 
 
-def monte_process_data(par, title):
+def monte_process_data(par, title,times=10):
     data_set = []
     buy_data_set = []
-    for i in range(10):
+    for i in range(times):
         seed(i)
         merchants, customers, regulators = gen_models(**par)
         data, buy_data = game(game_rounds=1000, merchants=merchants, customers=customers, regulators=regulators)
         data_set.append(data)
-        buy_data_set.append(buy_data)
+        # buy_data_set.append(buy_data)
     with open('./data/monte_data-' + title + '.pk', 'wb') as f:
         pickle.dump(data_set + buy_data_set, f)
+
+
+def plot_monte_average_4(titles, mers_num, show=True, times=10):
+    speculative_num, honest_num = mers_num
+    total_num = sum(mers_num)
+    sub_num = len(titles)
+    fig, axes = plt.subplots(1, 1, figsize=(5, 5), dpi=300)
+    mers_money_set = []
+    linestyle_str = ['dashed'] * speculative_num + ['solid'] * honest_num + ['solid'] * total_num
+    for title in titles:
+        with open('./data/monte_data-' + title + '.pk', 'rb') as f:
+            data = pickle.load(f)
+        data_set = data[:times]
+        mers_average_money = monte_process_plot(data_set, mers_num)
+        mers_money_set.append(mers_average_money)
+    for i, mers_money in enumerate(mers_money_set):
+        axes.plot(mers_money)
+        color = ['r' for i in range(speculative_num)] + ['b' for i in range(honest_num)] + ['g' for i in
+                                                                                            range(sum(mers_num), sum(
+                                                                                                mers_num) + speculative_num)] + [
+                    'c' for i in range(sum(mers_num) + speculative_num, 2 * sum(mers_num))]
+    for i, j in enumerate(axes.lines):
+        j.set_color(color[i])
+        j.set_linestyle(linestyle_str[i])
+        j.set_label('Selling fake' if i < speculative_num else 'Not Selling fake')
+    handles, labels = axes.get_legend_handles_labels()
+    display = [0, speculative_num, sum(mers_num), sum(mers_num) + speculative_num]
+    axes.plot([0], marker='None', linestyle='None', label='7-7')
+    axes.plot([0], marker='None', linestyle='None', label='7-8')
+    fig.legend([axes.lines[-2], axes.lines[-1]] * 2 + [handle for i, handle in enumerate(handles) if i in display],
+               ['7.7', '', '7.8', ''] + ['Selling fake', 'Not selling fake'] * 2, ncol=2)
+    if show:
+        plt.show()
+    else:
+        plt.savefig('./images/' + 'monte-ave-all-' + title[-3:], bbox_inches='tight')

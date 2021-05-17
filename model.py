@@ -30,6 +30,7 @@ class Merchant:
         # fake rate.
         self.increase_fake_rate = par['increase_fake_rate']
         self.change_fake_rate = par['change_fake_rate']
+        self.time_to_change = False
 
         self.sell_count = 0  # times the merchant sells goods.
         self.punished_count = 0  # how many times the merchant be punished
@@ -37,6 +38,11 @@ class Merchant:
 
     def fake_change(self):
         if not self.change_fake_rate:
+            return 0
+        if self.comment < self.decrease_fake_bound and not self.time_to_change:
+            self.time_to_change = True
+        if not self.time_to_change:
+            # i.e. not until first time reach decrease fake bound would the merchant change its fake rate.
             return 0
         if self.comment < self.decrease_fake_bound:
             self.fake_rate -= self.decrease_fake_rate
@@ -48,7 +54,6 @@ class Merchant:
         self.fake_rate[self.fake_rate <= 0] = 0
         # if there no fake for sell when fake_sell=False, the fake rate of it is set to 0
         # self.fake_rate = [0 if fake_sell==False else rate for (rate,fake_sell) in zip(self.fake_rate,self.fake_sell)]
-
 
     def punished(self):
         pass
@@ -78,7 +83,7 @@ class Customer:
         self.buy_with_weights = par['buy_with_weights']
         #  Parameter TBD
 
-    def change_bound(self, perceive_real=None,buy_good_kind=None):
+    def change_bound(self, perceive_real=None, buy_good_kind=None):
         """
         Change the buy_bound if bought something genuine or fake.
         Need some changes on the bound changing process, e.g., functional change?
@@ -132,18 +137,18 @@ class Customer:
             found_fake = True
             # found by the customer
             if choices([found_fake, False], [identify_fake_rate, 1 - identify_fake_rate])[0]:
-                self.change_bound(False,good_kind)
+                self.change_bound(False, good_kind)
                 true_type = False
                 perceive_type = False
             # Merchant sold fake but wasn't found by the customer.
             else:
-                self.change_bound(True,good_kind)
+                self.change_bound(True, good_kind)
                 true_type = False
                 perceive_type = True
         else:
             # selling real
             # Default
-            self.change_bound(True,good_kind)
+            self.change_bound(True, good_kind)
 
         merchant2buy.money += revenue(true_type, good_kind, merchant2buy)
         merchant2buy.sell_count += 1
@@ -172,6 +177,7 @@ class Regulator:
         self.prob_random_check = par['prob_random_check']
         self.lazy = par['lazy']
         self.prob_check_good = par['prob_check_good']
+        self.check_inside_market = par['check_inside_market']
         # self.make_public = True
 
     def check_market(self, mers=None):
@@ -187,16 +193,19 @@ class Regulator:
             merchant2check = choices(mers, weight)[0]
         else:
             merchant2check = choice(mers)
-        good2check = choices(merchant2check.good_kind,self.prob_check_good)[0]
+        good2check = choices(merchant2check.good_kind, self.prob_check_good)[0]
         fake_rate = merchant2check.fake_rate[good2check]
         fake_price = merchant2check.fake_price[good2check]
+        real_price = merchant2check.real_price[good2check]
         rand_false = random()
         true_type = True
         punished_mark = False
+        lazy = False
         if rand_false <= fake_rate:  # the merchant sells fake good
             rand_identify = random()
             true_type = False
             if self.lazy:  # the regulator is lazy
+                lazy = True
                 if self.lazy_identify_rate >= rand_identify:
                     # Merchant sold fake good and was caught.
                     self.punish(fake_price, lazy=True, mer=merchant2check)
@@ -205,10 +214,15 @@ class Regulator:
                 if self.diligent_identify_rate >= rand_identify:
                     self.punish(fake_price, lazy=False, mer=merchant2check)
                     punished_mark = True
-        if not punished_mark:
-            merchant2check.money += revenue(true_type, good2check, merchant2check)
+            self.check_cost += fake_price * (self.lazy_cost_rate if lazy else self.diligent_cost_rate)
+        self.check_cost += real_price * (self.lazy_cost_rate if lazy else self.diligent_cost_rate)
+        if self.check_inside_market:
+            if not punished_mark:
+                merchant2check.money += revenue(true_type, good2check, merchant2check)
+            else:
+                merchant2check.money -= merchant2check.fake_cost[good2check]
         else:
-            merchant2check.money -= merchant2check.fake_cost[good2check]
+            pass
 
     def punish(self, good_price=None, lazy=None, mer=None):
         mer.punished_count += 1
@@ -219,7 +233,6 @@ class Regulator:
         mer.comment = .0 if mer.comment < .0 else mer.comment
         mer.punished()
         self.fine_got += punishment_money
-        self.check_cost += good_price * (self.lazy_cost_rate if lazy else self.diligent_cost_rate)
 
     def make_public(self):
         pass
