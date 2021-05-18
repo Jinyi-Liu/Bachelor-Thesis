@@ -122,6 +122,8 @@ par_model_3_2 = copy.deepcopy(par_model_3_1)
 par_model_3_2['cus']['prob_comment_on_real'] = [0.2]
 par_model_3_3 = copy.deepcopy(par_model_3_2)
 par_model_3_3['cus']['buy_with_weights'] = True
+par_model_3_4 = copy.deepcopy(par_model_3_3)
+par_model_3_4['cus']['identify_fake_rate'] = [0.5]
 
 par_model_4_1 = copy.deepcopy(par_model_1_1)
 par_model_4_1['cus'] = customer_par
@@ -209,3 +211,10 @@ par_model_7_7 = copy.deepcopy(par_model_7_1)
 par_model_7_7['reg']['check_inside_market'] = False
 par_model_7_8 = copy.deepcopy(par_model_7_2)
 par_model_7_8['reg']['check_inside_market'] = False
+
+par_model_7_9 = copy.deepcopy(par_model_7_1)
+par_model_7_9['reg']['check_inside_market'] = False
+par_model_7_9['mer'].update({'speculative_num': 9, 'honest_num': 1})
+par_model_7_10 = copy.deepcopy(par_model_7_2)
+par_model_7_10['reg']['check_inside_market'] = False
+par_model_7_10['mer'].update({'speculative_num': 9, 'honest_num': 1})

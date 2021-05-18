@@ -190,7 +190,7 @@ def get_mers_num(data_set):
     good_num = len(mer_fake[0])
     check_temp = [0 for _ in range(good_num)]
     temp = (mer_fake == check_temp)
-    temp = [_[0] for _ in temp]
+    temp = [_.all() for _ in temp]
     honest_num = sum(temp)
     speculative_num = len(mer_fake) - honest_num
     return speculative_num, honest_num
