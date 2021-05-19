@@ -81,6 +81,7 @@ class Customer:
         self.prob_comment_on_real = par['prob_comment_on_real']
         self.prob_random_buy = par['prob_random_buy']  # Irrational customer.
         self.buy_with_weights = par['buy_with_weights']
+        self.learning_fake_rate = par['learning_fake_rate']
         #  Parameter TBD
 
     def change_bound(self, perceive_real=None, buy_good_kind=None):
@@ -106,6 +107,10 @@ class Customer:
         :return:
         """
         pass
+
+    def increase_identify_rate(self, good_kind):
+        self.identify_fake_rate[good_kind] += self.learning_fake_rate
+        self.identify_fake_rate[self.identify_fake_rate > 1] = 1
 
     def buy(self, mers, mers_num):
         """
@@ -138,6 +143,7 @@ class Customer:
             # found by the customer
             if choices([found_fake, False], [identify_fake_rate, 1 - identify_fake_rate])[0]:
                 self.change_bound(False, good_kind)
+                self.increase_identify_rate(good_kind)
                 true_type = False
                 perceive_type = False
             # Merchant sold fake but wasn't found by the customer.

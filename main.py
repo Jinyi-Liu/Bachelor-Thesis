@@ -69,8 +69,8 @@ plot_image_4(pars_titles_new, show=0)
 # pars = [par_model_6_1, par_model_6_2,par_model_6_3,par_model_6_4,par_model_6_5]
 # pars_titles = ['model_6-1', 'model_6-2','model_6-3','model_6-4','model_6-5']
 
-pars = [par_model_3_4]
-pars_titles = ['model_3-4']
+pars = [par_model_7_9,par_model_7_10]
+pars_titles = ['model_7-9','model_7-10']
 
 # pars = [par_model_7_1, par_model_7_2,par_model_7_3,par_model_7_4]
 # pars_titles = ['model_7-1', 'model_7-2','monte_7-3','monte_7-4']
@@ -80,14 +80,15 @@ pars_titles = ['model_3-4']
 # pars_titles = ['model_7-7','model_7-8']
 # pars = [par_model_7_9,par_model_7_10]
 # pars_titles = ['model_7-9','model_7-10']
-show=False
-output_single(pars, pars_titles, show=show, set_seed=25)
+show = False
+# output_single(pars, pars_titles, show=show, set_seed=2)
 
 # times = 30
 # for par, title in zip(pars, pars_titles):
 #     monte_process_data(par, title, times)
-    # plot_monte_average(title, show=show,times=times)
-    # plot_monte_all(title, show=show, times=times)
-# plot_monte_average_all(pars_titles,[5,5],False,times)
+#     plot_monte_average(title, show=show, times=times)
+#     plot_monte_all(title, show=show, times=times)
+pars_titles = ['model_7-8','model_7-10']
+plot_monte_average_all(pars_titles,False,times)
 # plot_reg_cost(pars_titles,times)
 # plot_image_5(pars_titles[2:], show=False)

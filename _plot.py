@@ -32,10 +32,10 @@ def plot_image(data, title, mers, show):
     axes[0, 0].legend([handle for i, handle in enumerate(handles) if i in display],
                       ['Selling fake', 'Not selling fake'])
     axes[0, 1].set_title("Regulators' Fine and Cost")
-    axes[0, 1].plot(reg_fine,label='fine',color='b')
-    axes[0, 1].plot(reg_cost,label='cost',color='r')
+    axes[0, 1].plot(reg_fine, label='fine', color='b')
+    axes[0, 1].plot(reg_cost, label='cost', color='r')
     handles_reg, labels_reg = axes[0, 1].get_legend_handles_labels()
-    axes[0, 1].legend([handle for i, handle in enumerate(handles_reg) if i in [0,reg_num]],
+    axes[0, 1].legend([handle for i, handle in enumerate(handles_reg) if i in [0, reg_num]],
                       ['Fine', 'Regulation cost'])
 
     axes[1, 0].set_title("Merchants' Profit")
@@ -110,8 +110,10 @@ def plot_monte_average(title, show=True, times=10):
     else:
         plt.savefig('./images/monte-ave-' + title[-3:], bbox_inches='tight')
 
-
-def plot_monte_average_all(titles, mers_num, show=True, times=10):
+import re
+def plot_monte_average_all(titles, show=True, times=10):
+    a = re.compile('\d-\d{1,2}')
+    re_titles = [a.findall(title)[0] for title in titles]
     sub_num = len(titles)
     fig, axes = plt.subplots(1, 1, figsize=(5, 5), dpi=300)
     mers_money_set = []
@@ -127,23 +129,23 @@ def plot_monte_average_all(titles, mers_num, show=True, times=10):
     for i, mers_money in enumerate(mers_money_set):
         axes.plot(mers_money)
         color = ['r' for i in range(speculative_num)] + ['b' for i in range(honest_num)] + ['g' for i in
-                                                                                            range(sum(mers_num), sum(
-                                                                                                mers_num) + speculative_num)] + [
-                    'c' for i in range(sum(mers_num) + speculative_num, 2 * sum(mers_num))]
+                                                                                            range(mers_total_num,
+                                                                                                  mers_total_num + speculative_num)] + [
+                    'c' for i in range(mers_total_num + speculative_num, 2 * mers_total_num)]
     for i, j in enumerate(axes.lines):
         j.set_color(color[i])
         j.set_linestyle(linestyle_str[i])
         j.set_label('Selling fake' if i < speculative_num else 'Not Selling fake')
     handles, labels = axes.get_legend_handles_labels()
-    display = [0, speculative_num, sum(mers_num), sum(mers_num) + speculative_num]
+    display = [0, speculative_num, mers_total_num, mers_total_num + speculative_num]
     axes.plot([0], marker='None', linestyle='None', label='7-7')
     axes.plot([0], marker='None', linestyle='None', label='7-8')
     fig.legend([axes.lines[-2], axes.lines[-1]] * 2 + [handle for i, handle in enumerate(handles) if i in display],
-               ['7.7', '', '7.8', ''] + ['Selling fake', 'Not selling fake'] * 2, ncol=2)
+               ['%s'%re_titles[0], '', '%s'%re_titles[1], ''] + ['Selling fake', 'Not selling fake'] * 2, ncol=2)
     if show:
         plt.show()
     else:
-        plt.savefig('./images/' + 'monte-ave-all-' + title[-3:], bbox_inches='tight')
+        plt.savefig('./images/' + 'monte-ave-all-' + re_titles[0], bbox_inches='tight')
 
 
 def plot_monte_all(title, show=True, times=10):
@@ -295,7 +297,7 @@ def plot_image_5(pars_titles, show):
     linestyle_str = (['dashed'] * speculative_num + ['solid'] * honest_num + ['dotted'] * reg_num) * len(pars_titles)
     color = ['r'] * total_num + ['b'] * total_num
     for i, mers_money in enumerate(mers_money_set):
-        axes.plot(mers_money,alpha=1-i/len(mers_money_set))
+        axes.plot(mers_money, alpha=1 - i / len(mers_money_set))
         axes.plot(regs_fine_set[i])
     for i, j in enumerate(axes.lines):
         j.set_color(color[i])
